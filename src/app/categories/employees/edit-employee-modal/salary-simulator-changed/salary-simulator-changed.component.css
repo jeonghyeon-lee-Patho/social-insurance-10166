@@ -1,0 +1,522 @@
+.simulator-changed-container {
+  margin: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  overflow: hidden;
+}
+
+.simulator-header {
+  padding: 0;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  padding: 6px 16px;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  background-color: #f8fafc;
+}
+
+.toggle-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.toggle-icon {
+  display: inline-block;
+  transition: transform 0.1s ease;
+  font-size: 12px;
+}
+
+.toggle-btn.expanded .toggle-icon {
+  transform: rotate(90deg);
+}
+
+.toggle-btn.expanded {
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.simulator-panel {
+  padding: 12px;
+  background-color: #ffffff;
+  border-top: 1px solid #cbd5e1;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.settings-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  width: 90px;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.control-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.change-month-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.year-input-sm,
+.month-input-sm {
+  width: 62px;
+  padding: 4px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+  background-color: #ffffff;
+}
+
+.separator {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.prev-data-badge {
+  font-size: 11px;
+  color: #2563eb;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
+.radio-inline-group,
+.checkbox-inline-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.radio-label,
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #334155;
+  font-size: 13px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.radio-input,
+.checkbox-input {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.direction-select {
+  padding: 5px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #ffffff;
+  color: #334155;
+}
+
+/* ==========================================================================
+   月別入力 & 非活性スタイル
+   ========================================================================== */
+.months-group {
+  margin: 12px 0;
+  padding: 8px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  transition: opacity 0.2s ease;
+}
+
+.months-group.is-disabled {
+  opacity: 0.5;
+}
+
+.months-group.is-disabled .amount-input,
+.months-group.is-disabled .days-checkbox {
+  cursor: not-allowed;
+  background-color: #f1f5f9;
+}
+
+.month-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.month-input:last-child {
+  margin-bottom: 0;
+}
+
+.month-input label {
+  font-weight: 600;
+  color: #334155;
+  min-width: 40px;
+  font-size: 13px;
+}
+
+.amount-input {
+  width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: right;
+  background-color: #ffffff;
+}
+
+.yen {
+  color: #64748b;
+  font-size: 13px;
+  min-width: 20px;
+}
+
+.month-input .checkbox-label {
+  margin-left: 4px;
+}
+
+.days-checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+}
+
+.checkbox-label span {
+  font-size: 11px;
+}
+
+.notes {
+  margin: 12px 0;
+  padding: 8px 12px;
+  background-color: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+}
+
+.notes p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #92400e;
+}
+
+.notes p:first-child {
+  margin-top: 0;
+}
+
+.notes p:last-child {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   判定結果 & 警告エリア
+   ========================================================================== */
+.result-group {
+  margin: 12px 0 0 0;
+  padding: 8px 12px;
+  background-color: #eff6ff;
+  border-left: 3px solid #2563eb;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.result-group.has-warning {
+  background-color: #fef2f2;
+  border-left-color: #dc2626;
+}
+
+.warnings {
+  margin: 0;
+}
+
+.warning-item {
+  padding: 4px 0;
+  background-color: transparent;
+  color: #7f1d1d;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.warnings+.result-success,
+.warnings+.result-info {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #fca5a5;
+}
+
+.result-label {
+  margin: 0;
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
+
+.result-value {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grade-diff {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.grade-diff.increase {
+  color: #dc2626;
+}
+
+.grade-diff.decrease {
+  color: #2563eb;
+}
+
+.grade-diff.nochange {
+  color: #64748b;
+}
+
+.result-info .result-value {
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* ボタン */
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.apply-btn,
+.clear-btn,
+.close-btn {
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-btn {
+  background-color: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.apply-btn:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.apply-btn:disabled {
+  background-color: #cbd5e1;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.clear-btn,
+.close-btn {
+  background-color: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.clear-btn:hover:not(:disabled),
+.close-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.close-btn {
+  margin-left: auto;
+}
+
+/* 上書きダイアログ */
+.overwrite-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.overwrite-confirm-dialog {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+}
+
+.overwrite-confirm-dialog h3 {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin: 12px 0 6px 0;
+}
+
+.target-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.target-period-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.period-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.action-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #b45309;
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.target-note {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-btn,
+.cancel-btn {
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  background-color: #2563eb;
+  color: white;
+  border: 1px solid #2563eb;
+}
+
+.cancel-btn {
+  background-color: white;
+  border: 1px solid #cbd5e1;
+}

@@ -1,0 +1,253 @@
+.rates-container {
+  width: 100%;
+  min-height: 100%;
+  background-color: #f8fafc;
+  padding: 20px 20px; 
+  box-sizing: border-box;
+}
+
+.content-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 20px 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-header {
+  margin-bottom: 15px;
+}  
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #0f172a;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 10px;
+}
+
+/* ローディング */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  color: #475569;
+}
+
+/* グリッドレイアウト（幅350px固定で自動折り返し） */
+.rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 350px);
+  gap: 16px;
+  justify-content: start;
+}
+
+/* カード共通スタイル */
+.rate-card {
+  width: 350px;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.rate-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+/* カードヘッダー */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.insurance-type-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.insurance-type-badge.kyokai {
+  background-color: #dbeafe;
+  color: #0369a1;
+}
+
+.insurance-type-badge.kumiai {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.rate-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* カードボディ（縦間隔を圧縮） */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #334155;
+}
+
+.label {
+  color: #64748b;
+  font-weight: 500;
+  min-width: 90px;
+}
+
+.value {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.ratio-badge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 6px;
+  background-color: #f1f5f9;
+  color: #64748b;
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 労使負担割合 */
+.card-burden-ratio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 5px 8px;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+/* カードフッター */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.employee-count {
+  font-size: 12px;
+}
+
+.employee-count .value {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* アクションボタン */
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-edit,
+.btn-delete {
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background-color: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-edit:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-delete {
+  background-color: #fff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background-color: #fee2e2;
+}
+
+.btn-delete:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+/* 末尾に常時表示される「追加カード」 */
+.rate-card.add-rate-card {
+  border: 2px dashed #cbd5e1;
+  background-color: #ffffff;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  cursor: pointer;
+}
+
+.rate-card.add-rate-card:hover {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.add-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.rate-card.add-rate-card:hover .add-card-inner {
+  color: #2563eb;
+}
+
+.add-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.add-text {
+  font-size: 14px;
+  font-weight: 600;
+}

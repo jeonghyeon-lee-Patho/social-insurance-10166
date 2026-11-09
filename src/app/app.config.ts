@@ -13,7 +13,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
 
     provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideFirestore(() => getFirestore(getApp(), 'socical-db')),
+    provideFirestore(() => getFirestore()),
+    //provideFirestore(() => getFirestore(getApp(), 'socical-db')),
     provideAuth(() => getAuth())  
   ]
 };

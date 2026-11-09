@@ -1,0 +1,140 @@
+<div class="modal-overlay" *ngIf="isOpen">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <!-- モーダルヘッダー -->
+    <div class="modal-header">
+      <h3 class="modal-title">
+        {{ selectedRecord ? '適用基準・資格履歴を編集' : '適用基準・資格履歴を登録' }}
+      </h3>
+      <button class="modal-close-btn" (click)="cancel()" title="閉じる">×</button>
+    </div>
+
+    <!-- フォームコンテンツ -->
+    <form [formGroup]="form" class="modal-body">
+
+      <!-- 1. 適用開始年月 -->
+      <div class="form-row">
+        <label class="form-label">
+          適用開始年月 <span class="required-badge">*</span>
+        </label>
+        <div class="form-field-content">
+          <div class="date-select-group-compact">
+            <select class="form-control select-year" formControlName="effectiveStartYear">
+              <option value="">年</option>
+              <option *ngFor="let y of applicableYears" [value]="y">{{ y }}</option>
+            </select>
+            <span class="separator">/</span>
+            <select class="form-control select-month" formControlName="effectiveStartMonth">
+              <option value="">月</option>
+              <option *ngFor="let m of months" [value]="m">{{ ('0' + m).slice(-2) }}</option>
+            </select>
+          </div>
+          <div *ngIf="form.get('effectiveStartYear')?.touched && form.get('effectiveStartYear')?.invalid"
+            class="error-message">
+            適用開始年月は必須です
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 適用社会保険基準 -->
+      <div class="form-row">
+        <label for="insuranceRateMasterId" class="form-label">
+          適用社会保険基準 <span class="required-badge">*</span>
+        </label>
+        <div class="form-field-content">
+          <select id="insuranceRateMasterId" class="form-control" formControlName="insuranceRateMasterId">
+            <option value="">選択してください</option>
+            <option *ngFor="let master of insuranceRateMasters" [value]="master.id">
+              {{ master.name }}
+            </option>
+            <option value="N/A">対象外</option>
+          </select>
+          <div *ngIf="form.get('insuranceRateMasterId')?.touched && form.get('insuranceRateMasterId')?.invalid"
+            class="error-message">
+            適用基準は必須です
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 特例および種別設定 -->
+      <div class="form-row">
+        <label class="form-label">
+          特例および種別設定 <span class="required-badge">*</span>
+        </label>
+        <div class="form-field-content">
+          <!-- ラジオボタングループ（横並び） -->
+          <div class="radio-group-inline">
+
+            <!-- (●) 通常 -->
+            <div class="radio-item-inline">
+              <input type="radio" id="exception-normal" [value]="exceptionTypes.NORMAL" formControlName="exceptionType"
+                (change)="onExceptionTypeChange()" class="radio-input" />
+              <label for="exception-normal" class="radio-label-inline">
+                通常
+              </label>
+            </div>
+
+            <!-- ( ) 外国人社会保障協定免除 -->
+            <div class="radio-item-inline">
+              <input type="radio" id="exception-foreign" [value]="exceptionTypes.FOREIGN_AGREEMENT_PENSION"
+                formControlName="exceptionType" (change)="onExceptionTypeChange()" class="radio-input" />
+              <label for="exception-foreign" class="radio-label-inline">
+                外国人協定免除
+              </label>
+            </div>
+
+            <!-- ( ) 育児・産前産後休業免除 -->
+            <div class="radio-item-inline">
+              <input type="radio" id="exception-childcare" [value]="exceptionTypes.CHILDCARE_LEAVE_EXEMPTION"
+                formControlName="exceptionType" (change)="onExceptionTypeChange()" class="radio-input" />
+              <label for="exception-childcare" class="radio-label-inline">
+                休業免除
+              </label>
+            </div>
+
+          </div>
+
+          <!-- 外国人協定免除の詳細オプション（選択時のみ表示） -->
+          <div *ngIf="isForeignAgreementSelected" class="radio-details-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="pension-exempt" formControlName="pensionExempt" class="checkbox-input" />
+              <label for="pension-exempt" class="checkbox-label">
+                厚生年金免除
+              </label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="health-exempt" formControlName="healthExempt" class="checkbox-input" />
+              <label for="health-exempt" class="checkbox-label">
+                健康・介護保険
+              </label>
+            </div>
+          </div>
+
+          <div *ngIf="form.get('exceptionType')?.touched && form.get('exceptionType')?.invalid" class="error-message">
+            特例種別は必須です
+          </div>
+        </div>
+      </div>
+
+      <!-- 情報ボックス -->
+      <div class="info-box">
+        <p>
+          <strong>※ 適用開始年月について：</strong>
+          適用開始年月を設定すると、既存の適用履歴の終了年月が自動的に調整されます。他の履歴の適用期間が変更される場合がありますのでご注意ください。
+        </p>
+      </div>
+    </form>
+
+    <!-- モーダルフッター -->
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancel()" [disabled]="isSaving">
+        キャンセル
+      </button>
+
+      <div class="button-spacer"></div>
+
+      <button class="btn btn-success" (click)="save()" [disabled]="isSaving || form.invalid">
+        {{ isSaving ? '保存中...' : '保存' }}
+      </button>
+    </div>
+  </div>
+</div>

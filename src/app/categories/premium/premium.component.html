@@ -1,0 +1,576 @@
+<div class="premium-container">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>社員別保険料</h1>
+    </div>
+
+    <div class="table-card">
+      <!-- タブナビゲーション ＋ 徴収基準トグル -->
+      <div class="tab-and-toggle-header">
+        <div class="tab-navigation">
+          <button class="tab-button" [class.active]="activeTab === 'monthly'" (click)="selectTab('monthly')">
+            月別保険料
+          </button>
+          <button class="tab-button" [class.active]="activeTab === 'annual'" (click)="selectTab('annual')">
+            年間統合（会計年度）
+          </button>
+        </div>
+
+        <div class="collection-basis-toggle"
+          [class.disabled-toggle]="activeTab === 'annual' || activeSegment === 'bonus'">
+          <label>徴収基準:</label>
+          <label class="toggle-option">
+            <input type="radio" name="collectionBasis" value="nextMonth"
+              [disabled]="activeTab === 'annual' || activeSegment === 'bonus'" [(ngModel)]="collectionBasis"
+              (change)="onCollectionBasisChange()" />
+            翌月徴収（前月分控除）
+          </label>
+          <label class="toggle-option">
+            <input type="radio" name="collectionBasis" value="currentMonth"
+              [disabled]="activeTab === 'annual' || activeSegment === 'bonus'" [(ngModel)]="collectionBasis"
+              (change)="onCollectionBasisChange()" />
+            当月徴収（当月分控除）
+          </label>
+        </div>
+      </div>
+
+      <!-- 月別コントロールバー -->
+      <div class="monthly-controls" *ngIf="activeTab === 'monthly'">
+        <div class="monthly-left-controls">
+          <div class="date-picker-group">
+            <select [(ngModel)]="selectedYear" (change)="onMonthlyDateChange()" class="date-select">
+              <option *ngFor="let year of availableYears" [value]="year">{{ year }}年</option>
+            </select>
+            <select [(ngModel)]="selectedMonth" (change)="onMonthlyDateChange()" class="date-select">
+              <option *ngFor="let month of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="month">{{ month }}月</option>
+            </select>
+          </div>
+
+          <div class="segment-group">
+            <label class="segment-option">
+              <input type="radio" name="segment" value="total" [(ngModel)]="activeSegment"
+                (change)="selectSegment('total')" />
+              総保険料
+            </label>
+            <label class="segment-option">
+              <input type="radio" name="segment" value="salary" [(ngModel)]="activeSegment"
+                (change)="selectSegment('salary')" />
+              給与保険料
+            </label>
+            <label class="segment-option">
+              <input type="radio" name="segment" value="bonus" [(ngModel)]="activeSegment"
+                (change)="selectSegment('bonus')" />
+              賞与保険料
+            </label>
+          </div>
+        </div>
+
+        <!-- コントロールバー右端: ミニ凡例 -->
+        <div class="highlight-legend">
+          <span class="legend-item"><span class="legend-dot dot-hire"></span>入社</span>
+          <span class="legend-item"><span class="legend-dot dot-retire"></span>退職</span>
+          <span class="legend-item"><span class="legend-dot dot-age"></span>年齢変動</span>
+        </div>
+      </div>
+
+      <!-- 年間コントロールバー -->
+      <div class="annual-controls" *ngIf="activeTab === 'annual'">
+        <div class="date-picker-group">
+          <select [(ngModel)]="selectedAnnualFiscalYear" (change)="onAnnualDateChange()" class="date-select">
+            <option *ngFor="let year of availableYears" [value]="year">{{ year }}年度</option>
+          </select>
+          <span class="fiscal-year-info">
+            (集計期間: {{ getFiscalYearRange() }} / 12ヶ月給与 ＋ 年間賞与合算)
+          </span>
+        </div>
+      </div>
+
+      <!-- 1行集約型ツールバー（ミニ凡例＋人数バッジ） -->
+      <div class="card-toolbar">
+        <div class="toolbar-single-row">
+          <div class="controls-group">
+            <div class="search-box">
+              <input type="text" placeholder="検索: 氏名・社員番号・部署など" [ngModel]="searchText" (input)="onSearchInput($event)"
+                class="search-input" />
+            </div>
+
+            <div class="sort-box">
+              <label>ソート:</label>
+              <select [(ngModel)]="sortKey" (change)="onSortChange()" class="sort-select">
+                <option value="employeeNumber">社員番号</option>
+                <option value="name">氏名</option>
+                <option value="age">年齢</option>
+                <option value="hireDate">入社年月日</option>
+                <option value="totalPremium">保険料</option>
+              </select>
+              <select [(ngModel)]="sortDirection" (change)="onSortChange()" class="sort-select">
+                <option value="asc">昇順</option>
+                <option value="desc">降順</option>
+              </select>
+            </div>
+
+            <div class="filter-box" *ngIf="activeTab === 'monthly'">
+              <label>絞込:</label>
+              <select [(ngModel)]="selectedInsuranceStandard" (change)="onInsuranceStandardFilterChange()"
+                class="filter-select">
+                <option value="">すべての保険基準</option>
+                <option *ngFor="let standard of availableInsuranceStandards" [value]="standard">
+                  {{ standard }}
+                </option>
+                <option value="対象外">対象外</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 右側: 徴収対象人数バッジ -->
+          <div class="employee-count-badge">
+            表示中: <strong>{{ filteredEmployees.length }}</strong> / {{ currentEligibleCount }}名
+          </div>
+        </div>
+      </div>
+
+      <!-- ローディング -->
+      <div *ngIf="isLoading" class="loading-message">
+        読み込み中...
+      </div>
+
+      <!-- テーブルスクロール領域 -->
+      <div *ngIf="!isLoading" class="table-scroll-area">
+        <!-- 1) 月別保険料 - 総保険料 (7列) -->
+        <table class="premium-table"
+          *ngIf="activeTab === 'monthly' && activeSegment === 'total' && filteredEmployees.length > 0">
+          <thead>
+            <tr>
+              <th class="w-7-emp-no">社員番号</th>
+              <th class="w-7-name">氏名</th>
+              <th class="w-7-standard">適用基準</th>
+              <th class="w-7-curr">総報酬額</th>
+              <th class="w-7-curr">本人負担</th>
+              <th class="w-7-curr">会社負担</th>
+              <th class="w-7-curr">総保険料</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let emp of filteredEmployees">
+              <tr class="employee-row" [ngClass]="getRowClass(emp)" (click)="toggleDetailExpand(emp.id, $event)">
+                <td class="w-7-emp-no" [title]="emp.employeeNumber">{{ emp.employeeNumber }}</td>
+                <td class="w-7-name">
+                  <div class="name-cell-wrapper">
+                    <span class="employee-name-text" [title]="emp.displayName">{{ emp.displayName }}</span>
+                  </div>
+                </td>
+                <td class="w-7-standard" [title]="emp.insuranceStandardName">{{ emp.insuranceStandardName }}</td>
+                <td class="w-7-curr">{{ emp.totalRemuneration | number }}</td>
+                <td class="w-7-curr">{{ emp.employeeShare | number }}</td>
+                <td class="w-7-curr">{{ emp.companyShare | number }}</td>
+                <td class="w-7-curr text-bold">{{ emp.totalPremium | number }}</td>
+              </tr>
+              <tr class="detail-row" *ngIf="expandedEmployeeId === emp.id">
+                <td colspan="7">
+                  <div class="detail-card">
+                    <div class="detail-header">
+                      <span>対象社員: <strong>{{ emp.displayName }}</strong> (適用基準: {{ emp.insuranceStandardName }})</span>
+                    </div>
+                    <div class="detail-notice" *ngIf="emp.noticeMessage">
+                      {{ emp.noticeMessage }}
+                    </div>
+                    <div class="detail-content">
+                      <table class="detail-table">
+                        <thead>
+                          <tr>
+                            <th>項目</th>
+                            <th>料率</th>
+                            <th>対象報酬額</th>
+                            <th>本人負担</th>
+                            <th>会社負担</th>
+                            <th>総保険料</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr [class.row-disabled]="!emp.breakdown.applyHealth">
+                            <td>健康保険</td>
+                            <td>{{ emp.breakdown.healthRate }}%</td>
+                            <td>{{ emp.breakdown.healthRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.healthEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.healthCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.healthTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyCare">
+                            <td>介護保険</td>
+                            <td>{{ emp.breakdown.careRate }}%</td>
+                            <td>{{ emp.breakdown.careRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.careEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.careCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.careTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyPension">
+                            <td>厚生年金</td>
+                            <td>{{ emp.breakdown.pensionRate }}%</td>
+                            <td>{{ emp.breakdown.pensionRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionTotal | number }} 円</td>
+                          </tr>
+                          <tr class="total-row">
+                            <td>当月合計</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>{{ emp.employeeShare | number }} 円</td>
+                            <td>{{ emp.companyShare | number }} 円</td>
+                            <td>{{ emp.totalPremium | number }} 円</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div class="deduction-breakdown">
+                        (※ 控除内訳: 給与控除分 {{ emp.breakdown.salaryTotal | number }} 円 / 賞与控除分 {{
+                        emp.breakdown.bonusTotal | number }} 円)
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-center">合計 ({{ filteredEmployees.length }}名)</td>
+              <td class="w-7-curr">{{ totalSegmentSum.remuneration | number }}</td>
+              <td class="w-7-curr">{{ totalSegmentSum.employee | number }}</td>
+              <td class="w-7-curr">{{ totalSegmentSum.company | number }}</td>
+              <td class="w-7-curr text-bold">{{ totalSegmentSum.premium | number }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- 2) 月別保険料 - 給与保険料 (8列) -->
+        <table class="premium-table"
+          *ngIf="activeTab === 'monthly' && activeSegment === 'salary' && filteredEmployees.length > 0">
+          <thead>
+            <tr>
+              <th class="w-8-emp-no">社員番号</th>
+              <th class="w-8-name">氏名</th>
+              <th class="w-8-standard">適用基準</th>
+              <th class="w-8-grade">標準報酬等級</th>
+              <th class="w-8-salary">報酬月額</th>
+              <th class="w-8-curr">本人負担</th>
+              <th class="w-8-curr">会社負担</th>
+              <th class="w-8-total">給与保険料</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let emp of filteredEmployees">
+              <tr class="employee-row" [ngClass]="getRowClass(emp)" (click)="toggleDetailExpand(emp.id, $event)">
+                <td class="w-8-emp-no" [title]="emp.employeeNumber">{{ emp.employeeNumber }}</td>
+                <td class="w-8-name">
+                  <div class="name-cell-wrapper">
+                    <span class="employee-name-text" [title]="emp.displayName">{{ emp.displayName }}</span>
+                  </div>
+                </td>
+                <td class="w-8-standard" [title]="emp.insuranceStandardName">{{ emp.insuranceStandardName }}</td>
+                <td class="w-8-grade">{{ emp.salaryGrade }}</td>
+                <td class="w-8-salary">{{ emp.monthlySalary | number }}</td>
+                <td class="w-8-curr">{{ emp.employeeShare | number }}</td>
+                <td class="w-8-curr">{{ emp.companyShare | number }}</td>
+                <td class="w-8-total text-bold">{{ emp.totalPremium | number }}</td>
+              </tr>
+              <tr class="detail-row" *ngIf="expandedEmployeeId === emp.id">
+                <td colspan="8">
+                  <div class="detail-card">
+                    <div class="detail-header">
+                      <span>対象社員: <strong>{{ emp.displayName }}</strong> (適用基準: {{ emp.insuranceStandardName }})</span>
+                    </div>
+                    <div class="detail-notice" *ngIf="emp.noticeMessage">
+                      {{ emp.noticeMessage }}
+                    </div>
+                    <div class="detail-content">
+                      <table class="detail-table">
+                        <thead>
+                          <tr>
+                            <th>項目</th>
+                            <th>料率</th>
+                            <th>標準報酬月額</th>
+                            <th>本人負担</th>
+                            <th>会社負担</th>
+                            <th>給与保険料</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr [class.row-disabled]="!emp.breakdown.applyHealth">
+                            <td>健康保険</td>
+                            <td>{{ emp.breakdown.healthRate }}%</td>
+                            <td>{{ emp.breakdown.healthRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.healthEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.healthCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.healthTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyCare">
+                            <td>介護保険</td>
+                            <td>{{ emp.breakdown.careRate }}%</td>
+                            <td>{{ emp.breakdown.careRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.careEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.careCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.careTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyPension">
+                            <td>厚生年金</td>
+                            <td>{{ emp.breakdown.pensionRate }}%</td>
+                            <td>{{ emp.breakdown.pensionRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.pensionTotal | number }} 円</td>
+                          </tr>
+                          <tr class="total-row">
+                            <td>当月合計</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>{{ emp.employeeShare | number }} 円</td>
+                            <td>{{ emp.companyShare | number }} 円</td>
+                            <td>{{ emp.totalPremium | number }} 円</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-center">合計 ({{ filteredEmployees.length }}名)</td>
+              <td class="w-8-grade text-center">-</td>
+              <td class="w-8-salary">{{ salarySegmentSum.salary | number }}</td>
+              <td class="w-8-curr">{{ salarySegmentSum.employee | number }}</td>
+              <td class="w-8-curr">{{ salarySegmentSum.company | number }}</td>
+              <td class="w-8-total text-bold">{{ salarySegmentSum.premium | number }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- 3) 月別保険料 - 賞与保険料 (7列) -->
+        <table class="premium-table"
+          *ngIf="activeTab === 'monthly' && activeSegment === 'bonus' && filteredEmployees.length > 0">
+          <thead>
+            <tr>
+              <th class="w-7-emp-no">社員番号</th>
+              <th class="w-7-name">氏名</th>
+              <th class="w-7-standard">適用基準</th>
+              <th class="w-7-curr">賞与支給額</th>
+              <th class="w-7-curr">本人負担</th>
+              <th class="w-7-curr">会社負担</th>
+              <th class="w-7-curr">賞与保険料</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let emp of filteredEmployees">
+              <tr class="employee-row" [ngClass]="getRowClass(emp)" (click)="toggleDetailExpand(emp.id, $event)"
+                [title]="emp.noticeMessage || ''">
+                <td class="w-7-emp-no" [title]="emp.employeeNumber">{{ emp.employeeNumber }}</td>
+                <td class="w-7-name">
+                  <div class="name-cell-wrapper">
+                    <span class="employee-name-text" [title]="emp.displayName">{{ emp.displayName }}</span>
+                  </div>
+                </td>
+                <td class="w-7-standard" [title]="emp.insuranceStandardName">{{ emp.insuranceStandardName }}</td>
+                <td class="w-7-curr">{{ emp.bonusAmount | number }}</td>
+                <td class="w-7-curr">{{ emp.employeeShare | number }}</td>
+                <td class="w-7-curr">{{ emp.companyShare | number }}</td>
+                <td class="w-7-curr text-bold">{{ emp.totalPremium | number }}</td>
+              </tr>
+              <tr class="detail-row" *ngIf="expandedEmployeeId === emp.id">
+                <td colspan="7">
+                  <div class="detail-card">
+                    <div class="detail-header">
+                      <span>対象社員: <strong>{{ emp.displayName }}</strong> (適用基準: {{ emp.insuranceStandardName }})</span>
+                    </div>
+                    <div class="detail-notice" *ngIf="emp.noticeMessage">
+                      {{ emp.noticeMessage }}
+                    </div>
+                    <div class="detail-content">
+                      <table class="detail-table">
+                        <thead>
+                          <tr>
+                            <th>項目</th>
+                            <th>料率</th>
+                            <th>標準賞与額</th>
+                            <th>本人負担</th>
+                            <th>会社負担</th>
+                            <th>賞与保険料</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr [class.row-disabled]="!emp.breakdown.applyHealth">
+                            <td>健康保険</td>
+                            <td>{{ emp.breakdown.healthRate }}%</td>
+                            <td>{{ emp.breakdown.bonusHealthRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusHealthEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusHealthCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusHealthTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyCare">
+                            <td>介護保険</td>
+                            <td>{{ emp.breakdown.careRate }}%</td>
+                            <td>{{ emp.breakdown.bonusCareRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusCareEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusCareCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusCareTotal | number }} 円</td>
+                          </tr>
+                          <tr [class.row-disabled]="!emp.breakdown.applyPension">
+                            <td>厚生年金</td>
+                            <td>{{ emp.breakdown.pensionRate }}%</td>
+                            <td>{{ emp.breakdown.bonusPensionRemuneration | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusPensionEmployee | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusPensionCompany | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusPensionTotal | number }} 円</td>
+                          </tr>
+                          <tr class="total-row">
+                            <td>当月合計</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>{{ emp.breakdown.bonusEmployeeTotal | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusCompanyTotal | number }} 円</td>
+                            <td>{{ emp.breakdown.bonusTotal | number }} 円</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-center">合計 ({{ filteredEmployees.length }}名)</td>
+              <td class="w-7-curr">{{ totalSegmentSum.remuneration | number }}</td>
+              <td class="w-7-curr">{{ totalSegmentSum.employee | number }}</td>
+              <td class="w-7-curr">{{ totalSegmentSum.company | number }}</td>
+              <td class="w-7-curr text-bold">{{ totalSegmentSum.premium | number }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- 4) 年間統合タブ (8列) -->
+        <table class="premium-table" *ngIf="activeTab === 'annual' && filteredEmployees.length > 0">
+          <thead>
+            <tr>
+              <th class="w-ann-emp-no">社員番号</th>
+              <th class="w-ann-name">氏名</th>
+              <th class="w-ann-curr">健康保険</th>
+              <th class="w-ann-curr">介護保険</th>
+              <th class="w-ann-curr">厚生年金</th>
+              <th class="w-ann-curr">本人負担</th>
+              <th class="w-ann-curr">会社負担</th>
+              <th class="w-ann-curr">年間保険料</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let emp of filteredEmployees">
+              <tr class="employee-row" [ngClass]="getRowClass(emp)" (click)="toggleDetailExpand(emp.id, $event)">
+                <td class="w-ann-emp-no" [title]="emp.employeeNumber">{{ emp.employeeNumber }}</td>
+                <td class="w-ann-name">
+                  <div class="name-cell-wrapper">
+                    <span class="employee-name-text" [title]="emp.displayName">{{ emp.displayName }}</span>
+                  </div>
+                </td>
+                <td class="w-ann-curr">{{ emp.annualHealth | number }}</td>
+                <td class="w-ann-curr">{{ emp.annualCare | number }}</td>
+                <td class="w-ann-curr">{{ emp.annualPension | number }}</td>
+                <td class="w-ann-curr">{{ emp.employeeShare | number }}</td>
+                <td class="w-ann-curr">{{ emp.companyShare | number }}</td>
+                <td class="w-ann-curr text-bold">{{ emp.totalPremium | number }}</td>
+              </tr>
+              <tr class="detail-row" *ngIf="expandedEmployeeId === emp.id">
+                <td colspan="8">
+                  <div class="detail-card">
+                    <div class="detail-header">
+                      <span>対象社員: <strong>{{ emp.displayName }}</strong> ({{ selectedAnnualFiscalYear }}年度
+                        年間詳細算出内訳)</span>
+                    </div>
+                    <div class="detail-content" *ngIf="emp.annualBreakdown">
+                      <!-- 1. 区分別年間控除実績 -->
+                      <div class="annual-summary-box">
+                        <div class="annual-sub-title">■ 区分別年間控除実績</div>
+                        <ul class="annual-meta-list">
+                          <li>
+                            毎月給与分累計 ({{ emp.annualBreakdown.salaryMonthsCount }}ヶ月) :
+                            本人 <strong>{{ emp.annualBreakdown.salaryEmployeeTotal | number }}</strong> 円 /
+                            会社 <strong>{{ emp.annualBreakdown.salaryCompanyTotal | number }}</strong> 円
+                            <span class="text-muted">(総額 {{ emp.annualBreakdown.salaryTotal | number }} 円)</span>
+                          </li>
+                          <li>
+                            年間賞与分累計 (計 {{ emp.annualBreakdown.bonusCount }}回) :
+                            本人 <strong>{{ emp.annualBreakdown.bonusEmployeeTotal | number }}</strong> 円 /
+                            会社 <strong>{{ emp.annualBreakdown.bonusCompanyTotal | number }}</strong> 円
+                            <span class="text-muted">(総額 {{ emp.annualBreakdown.bonusTotal | number }} 円)</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <!-- 2. 法定種別ごとの年間実績テーブル -->
+                      <div class="annual-summary-box" style="margin-top: 14px;">
+                        <div class="annual-sub-title">■ 法定種別ごとの年間実績</div>
+                        <table class="detail-table">
+                          <thead>
+                            <tr>
+                              <th>項目</th>
+                              <th>本人負担</th>
+                              <th>会社負担</th>
+                              <th>総保険料</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>健康保険</td>
+                              <td>{{ emp.annualBreakdown.healthEmployeeTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.healthCompanyTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.healthTotal | number }} 円</td>
+                            </tr>
+                            <tr>
+                              <td>介護保険</td>
+                              <td>{{ emp.annualBreakdown.careEmployeeTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.careCompanyTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.careTotal | number }} 円</td>
+                            </tr>
+                            <tr>
+                              <td>厚生年金</td>
+                              <td>{{ emp.annualBreakdown.pensionEmployeeTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.pensionCompanyTotal | number }} 円</td>
+                              <td>{{ emp.annualBreakdown.pensionTotal | number }} 円</td>
+                            </tr>
+                            <tr class="total-row">
+                              <td>年間合計</td>
+                              <td>{{ emp.employeeShare | number }} 円</td>
+                              <td>{{ emp.companyShare | number }} 円</td>
+                              <td>{{ emp.totalPremium | number }} 円</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" class="text-center">年間合計 ({{ filteredEmployees.length }}名)</td>
+              <td class="w-ann-curr">{{ annualSegmentSum.health | number }}</td>
+              <td class="w-ann-curr">{{ annualSegmentSum.care | number }}</td>
+              <td class="w-ann-curr">{{ annualSegmentSum.pension | number }}</td>
+              <td class="w-ann-curr">{{ annualSegmentSum.employee | number }}</td>
+              <td class="w-ann-curr">{{ annualSegmentSum.company | number }}</td>
+              <td class="w-ann-curr text-bold">{{ annualSegmentSum.premium | number }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div *ngIf="filteredEmployees.length === 0" class="no-data-message">
+          <p *ngIf="activeTab === 'monthly' && activeSegment === 'bonus'">該当月に賞与の支給実績がありません。</p>
+          <p *ngIf="!(activeTab === 'monthly' && activeSegment === 'bonus')">該当する社員データがありません。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

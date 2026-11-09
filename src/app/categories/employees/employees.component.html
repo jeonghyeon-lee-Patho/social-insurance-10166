@@ -1,0 +1,133 @@
+<div class="employee-container">
+  <app-edit-employee-modal *ngIf="showEditModal" [isOpen]="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
+    (onClose)="closeEditModal()" (onSave)="onEmployeeSaved($event)"></app-edit-employee-modal>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>社員情報</h1>
+    </div>
+
+    <div class="table-card">
+      <div class="card-toolbar">
+        <!-- 1段目: 検索・ソート ＋ 社員追加 -->
+        <div class="toolbar-primary-row">
+          <div class="controls-group">
+            <div class="search-box">
+              <input type="text" placeholder="検索: 氏名・社員番号・部署など" [ngModel]="searchText" (input)="onSearchInput($event)"
+                class="search-input" />
+            </div>
+
+            <div class="sort-box">
+              <label>ソート:</label>
+              <select [(ngModel)]="sortKey" (change)="onSortChange()" class="sort-select">
+                <option value="employeeNumber">社員番号</option>
+                <option value="name">氏名</option>
+                <option value="age">年齢</option>
+                <option value="hireDate">入社年月日</option>
+              </select>
+              <select [(ngModel)]="sortDirection" (change)="onSortChange()" class="sort-select">
+                <option value="asc">昇順</option>
+                <option value="desc">降順</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn-add-employee" (click)="openAddEmployeeModal()">
+            + 社員追加
+          </button>
+        </div>
+
+        <!-- 2段目: 状態トグル（在籍予定を追加） -->
+        <div class="toolbar-secondary-row">
+          <div class="status-filter-box">
+            <label>状態:</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="statusFilter" value="all" [(ngModel)]="statusFilter"
+                  (change)="onStatusFilterChange()" />
+                全員
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="statusFilter" value="active" [(ngModel)]="statusFilter"
+                  (change)="onStatusFilterChange()" />
+                在籍者
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="statusFilter" value="upcoming" [(ngModel)]="statusFilter"
+                  (change)="onStatusFilterChange()" />
+                入社予定
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="statusFilter" value="retired" [(ngModel)]="statusFilter"
+                  (change)="onStatusFilterChange()" />
+                退職者
+              </label>
+            </div>
+          </div>
+
+          <!-- 右側: ミニ凡例 ＋ 人数バッジ -->
+          <div class="toolbar-right-meta">
+            <div class="employee-legend">
+              <span class="legend-item"><span class="legend-box box-missing"></span>給与履歴未入力</span>
+              <span class="legend-item"><span class="legend-dot dot-danger"></span>扶養要件確認要</span>
+            </div>
+
+            <div class="employee-count-badge">
+              表示中: <strong>{{ filteredEmployees.length }}</strong> / {{ employees.length }}名
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="loading-message">
+        読み込み中...
+      </div>
+
+      <div *ngIf="!isLoading" class="table-scroll-area">
+        <table class="employees-table" *ngIf="filteredEmployees.length > 0">
+          <thead>
+            <tr>
+              <th class="col-employee-number">社員番号</th>
+              <th class="col-name">氏名</th>
+              <th class="col-birth-date">生年月日 (満年齢)</th>
+              <th class="col-hire-date">入社年月日</th>
+              <th class="col-retirement-date">退職年月日</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let employee of filteredEmployees" class="employee-row" [ngClass]="getRowClass(employee)"
+              [title]="employee.hasMissingHistory ? '標準報酬月額の未登録期間があります' : ''" (click)="openEditEmployeeModal(employee)">
+              <td class="col-employee-number" [title]="employee.employeeNumber">
+                <span>{{ employee.employeeNumber }}</span>
+              </td>
+              <td class="col-name" [title]="employee.displayName">
+                <div class="name-cell-wrapper">
+                  <span class="employee-name-text">{{ employee.displayName }}</span>
+                  <span *ngIf="employee.hasIneligibleDependent" class="dependent-danger-dot"
+                    title="被扶養者要件を満たさない家族が登録されています">
+                  </span>
+                </div>
+              </td>
+              <td class="col-birth-date">{{ formatDate(employee.dateOfBirth) }} ({{ employee.age }}歳)</td>
+              <td class="col-hire-date">{{ formatDate(employee.hireDate) }}</td>
+              <td class="col-retirement-date">
+                {{ employee.retirementDate ? formatDate(employee.retirementDate) : '-' }}
+              </td>
+              <td class="col-actions" (click)="$event.stopPropagation()">
+                <button class="btn-delete" (click)="deleteEmployee(employee)" title="削除">削除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div *ngIf="filteredEmployees.length === 0" class="no-data-message">
+          <p>該当する社員データがありません。</p>
+          <button class="btn-add-employee" (click)="openAddEmployeeModal()">
+            + 社員追加
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

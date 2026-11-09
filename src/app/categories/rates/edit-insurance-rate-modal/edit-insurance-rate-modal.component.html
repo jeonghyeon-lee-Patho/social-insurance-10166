@@ -1,0 +1,209 @@
+<!-- モーダルバックドロップ -->
+<div *ngIf="isOpen" class="modal-backdrop" (click)="closeModal()"></div>
+
+<!-- モーダルコンテナ -->
+<div *ngIf="isOpen" class="modal-overlay">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <!-- モーダルヘッダー -->
+    <div class="modal-header">
+      <h2>保険基準の設定</h2>
+      <button class="btn-close" (click)="closeModal()">✕</button>
+    </div>
+
+    <!-- モーダルボディ -->
+    <form [formGroup]="form" class="modal-body">
+      <!-- 基準名称 -->
+      <div class="form-group">
+        <label for="name" class="form-label">■ 基準名称 [必須] (最大20文字)</label>
+        <div class="form-field">
+          <input id="name" type="text" class="form-input" formControlName="name" maxlength="20"
+            placeholder="例: 協会けんぽ_東京都">
+          <span class="char-count">{{ form.get('name')?.value?.length || 0 }} / 20</span>
+        </div>
+        <div class="form-error" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+          基準名称は必須です（20文字以内）。
+        </div>
+      </div>
+
+      <!-- 保険種類 -->
+      <div class="form-group">
+        <label class="form-label">■ 保険種類 [必須]</label>
+        <div class="form-radio-group">
+          <label class="radio-label">
+            <input type="radio" [value]="InsuranceType.KYOKAI" formControlName="type">
+            <span>協会けんぽ</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" [value]="InsuranceType.KUMIAI" formControlName="type">
+            <span>組合健保</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 区切り線 -->
+      <div class="form-divider"></div>
+
+      <!-- 協会けんぽ設定 -->
+      <div *ngIf="form.get('type')?.value === InsuranceType.KYOKAI" class="form-section">
+        <div class="section-title">▼ 協会けんぽ設定 (地域連動)</div>
+
+        <div class="form-row">
+          <!-- エリア選択 -->
+          <div class="form-group">
+            <label for="region" class="form-label-small">エリア選択:</label>
+            <select id="region" class="form-select" formControlName="region">
+              <option value="">選択してください</option>
+              <option *ngFor="let region of regions" [value]="region.value">
+                {{ region.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 都道府県選択 -->
+          <div class="form-group">
+            <label for="prefecture" class="form-label-small">都道府県選択:</label>
+            <select id="prefecture" class="form-select" formControlName="prefecture">
+              <option value="">選択してください</option>
+              <option *ngFor="let pref of prefectures" [value]="pref">
+                {{ pref }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 料率・負担割合（読み取り専用） -->
+        <div class="form-group">
+          <label class="form-label">■ 料率・負担割合 (自動入力・読み取り専用)</label>
+
+          <div class="readonly-field">
+            <span class="label">健康保険料率 :</span>
+            <span class="value">{{ form.get('healthInsuranceRate')?.value }} %</span>
+            <span class="note">(※都道府県別)</span>
+          </div>
+
+          <div class="readonly-field">
+            <span class="label">介護保険料率 :</span>
+            <span class="value">{{ form.get('careInsuranceRate')?.value }} %</span>
+            <span class="note">(※全国共通/固定)</span>
+          </div>
+
+          <div class="readonly-field">
+            <span class="label">厚生年金料率 :</span>
+            <span class="value">{{ form.get('pensionInsuranceRate')?.value }} %</span>
+            <span class="note">(※全国共通/固定)</span>
+          </div>
+
+          <div class="readonly-field">
+            <span class="label">労使負担割合 :</span>
+            <span class="value">従業員 {{ form.get('employeePercentage')?.value }}% / 会社 {{
+              form.get('employerPercentage')?.value }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 組合健保設定 -->
+      <div *ngIf="form.get('type')?.value === InsuranceType.KUMIAI" class="form-section">
+        <div class="section-title">▼ 組合健保設定 (手動入力)</div>
+
+        <!-- 各種料率設定 -->
+        <div class="form-group">
+          <label class="form-label">■ 各種料率設定</label>
+
+          <div class="form-input-row">
+            <label for="healthInsuranceRate" class="label">健康保険料率 :</label>
+            <div class="input-wrapper">
+              <input id="healthInsuranceRate" type="number" class="form-input-number"
+                formControlName="healthInsuranceRate" step="0.01" min="3.0" max="13.0" placeholder="3.00 - 13.00"
+                (input)="onNumberInput('healthInsuranceRate', $event, 2)">
+              <span class="unit">%</span>
+              <span class="note">(3.00 - 13.00)</span>
+            </div>
+          </div>
+
+          <div class="form-input-row">
+            <label for="careInsuranceRate" class="label">介護保険料率 :</label>
+            <div class="input-wrapper">
+              <input id="careInsuranceRate" type="number" class="form-input-number" formControlName="careInsuranceRate"
+                step="0.01" min="0" max="5.0" placeholder="0.00 - 5.00"
+                (input)="onNumberInput('careInsuranceRate', $event, 2)">
+              <span class="unit">%</span>
+              <span class="note">(0.00 - 5.00)</span>
+            </div>
+          </div>
+
+          <div class="form-input-row">
+            <label for="pensionInsuranceRate" class="label">厚生年金料率 :</label>
+            <div class="input-wrapper">
+              <input id="pensionInsuranceRate" type="number" class="form-input-number"
+                formControlName="pensionInsuranceRate" placeholder="18.30">
+              <span class="unit">%</span>
+              <span class="note">(※全国共通/固定)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 労使負担割合の設定 (健康保険) -->
+        <div class="form-group">
+          <label class="form-label">■ 健康保険の労使負担割合</label>
+
+          <div class="form-input-row">
+            <label for="employeePercentage" class="label">従業員割合 :</label>
+            <div class="input-wrapper">
+              <input id="employeePercentage" type="number" class="form-input-number"
+                formControlName="employeePercentage" step="0.1" min="0" max="50" placeholder="50.0"
+                (input)="onNumberInput('employeePercentage', $event, 1)">
+              <span class="unit">%</span>
+              <span class="note">(0.0 - 50.0)</span>
+            </div>
+          </div>
+
+          <div class="form-input-row">
+            <label for="employerPercentage" class="label">会社負担割合 :</label>
+            <div class="input-wrapper">
+              <input id="employerPercentage" type="number" class="form-input-number"
+                formControlName="employerPercentage" placeholder="50.0">
+              <span class="unit">%</span>
+              <span class="note">(100 - 従業員割合)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 労使負担割合の設定 (介護保険) -->
+        <div class="form-group">
+          <label class="form-label">■ 介護保険の労使負担割合</label>
+
+          <div class="form-input-row">
+            <label for="careEmployeePercentage" class="label">従業員割合 :</label>
+            <div class="input-wrapper">
+              <input id="careEmployeePercentage" type="number" class="form-input-number"
+                formControlName="careEmployeePercentage" step="0.1" min="0" max="50" placeholder="50.0"
+                (input)="onNumberInput('careEmployeePercentage', $event, 1)">
+              <span class="unit">%</span>
+              <span class="note">(0.0 - 50.0)</span>
+            </div>
+          </div>
+
+          <div class="form-input-row">
+            <label for="careEmployerPercentage" class="label">会社負担割合 :</label>
+            <div class="input-wrapper">
+              <input id="careEmployerPercentage" type="number" class="form-input-number"
+                formControlName="careEmployerPercentage" placeholder="50.0">
+              <span class="unit">%</span>
+              <span class="note">(100 - 従業員割合)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </form>
+
+    <!-- モーダルフッター -->
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeModal()">キャンセル</button>
+      <button class="btn-save" [disabled]="!isSaveButtonEnabled" (click)="submitForm()">
+        {{ isSaving ? '保存中...' : '保 存' }}
+      </button>
+    </div>
+  </div>
+</div>
+

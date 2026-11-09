@@ -1,0 +1,432 @@
+<div class="modal-overlay" *ngIf="isOpen">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <!-- モーダルヘッダー -->
+    <div class="modal-header">
+      <h2 class="modal-title">社員情報 登録・編集</h2>
+      <button class="modal-close-btn" (click)="cancel()" title="閉じる">×</button>
+    </div>
+
+    <!-- ステップインジケータ -->
+    <div class="step-indicator">
+      <div class="step-bar">
+        <div class="step" [ngClass]="{ active: currentStep === 1 }">
+          <span class="step-number" [ngClass]="{ completed: currentStep > 1 }">1</span>
+          <span class="step-label">基本情報{{ currentStep === 1 ? '（選択中）' : '' }}</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step" [ngClass]="{ active: currentStep === 2 }">
+          <span class="step-number" [ngClass]="{ completed: currentStep > 2 }">2</span>
+          <span class="step-label">保険・報酬・賞与履歴{{ currentStep === 2 ? '（選択中）' : '' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- フォームコンテンツ -->
+    <form [formGroup]="form" class="modal-body">
+      <!-- ステップ 1: 基本情報 (7項目縦並び) -->
+      <div *ngIf="currentStep === 1" class="step-content">
+
+        <!-- 1. 社員番号 -->
+        <div class="form-row">
+          <label for="employeeNumber" class="form-label">
+            社員番号 <span class="required-badge">必須</span>
+          </label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper">
+              <input id="employeeNumber" type="text" formControlName="employeeNumber" class="form-control"
+                maxlength="20" />
+              <span class="form-note">※重複不可</span>
+            </div>
+            <div *ngIf="form.get('employeeNumber')?.touched && form.get('employeeNumber')?.invalid"
+              class="error-message">
+              {{ getErrorMessage('employeeNumber') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 氏名（漢字） -->
+        <div class="form-row">
+          <label for="nameKanji" class="form-label">
+            氏名 (漢字)
+          </label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper">
+              <input id="nameKanji" type="text" formControlName="nameKanji" class="form-control" placeholder="例: 山田 太郎"
+                maxlength="50" />
+            </div>
+            <div
+              *ngIf="form.get('nameKanji')?.invalid && (form.get('nameKanji')?.touched || form.get('nameKanji')?.dirty)"
+              class="error-message">
+              {{ getErrorMessage('nameKanji') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 氏名（カナ） -->
+        <div class="form-row">
+          <label for="nameKana" class="form-label">
+            氏名 (カナ) <span class="required-badge">必須</span>
+          </label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper">
+              <input id="nameKana" type="text" formControlName="nameKana" class="form-control" placeholder="例: ヤマダ タロウ"
+                maxlength="50" />
+            </div>
+            <div *ngIf="form.get('nameKana')?.invalid && (form.get('nameKana')?.touched || form.get('nameKana')?.dirty)"
+              class="error-message">
+              {{ getErrorMessage('nameKana') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 氏名（英字） -->
+        <div class="form-row">
+          <label for="nameRomaji" class="form-label">氏名 (英字)</label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper">
+              <input id="nameRomaji" type="text" formControlName="nameRomaji" class="form-control"
+                placeholder="例: Taro Yamada" maxlength="50" />
+            </div>
+            <div
+              *ngIf="form.get('nameRomaji')?.invalid && (form.get('nameRomaji')?.touched || form.get('nameRomaji')?.dirty)"
+              class="error-message">
+              {{ getErrorMessage('nameRomaji') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 所属・雇用情報 (省スペース配置) -->
+        <div class="form-row">
+          <label class="form-label">
+            属性・形態 <span class="required-badge">必須</span>
+          </label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper compact-split">
+              <div class="radio-inline-container">
+                <label class="radio-inline-label">
+                  <input type="radio" formControlName="gender" value="male" /> 男性
+                </label>
+                <label class="radio-inline-label">
+                  <input type="radio" formControlName="gender" value="female" /> 女性
+                </label>
+              </div>
+
+              <select formControlName="employmentType" class="form-control select-employment">
+                <option value="regular">正社員</option>
+                <option value="contract">契約社員</option>
+                <option value="partTime">パート・アルバイト</option>
+                <option value="executive">役員</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">部署・役職</label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper compact-split">
+              <input type="text" formControlName="department" placeholder="部署（例: 総務部）" class="form-control" />
+              <input type="text" formControlName="position" placeholder="役職（例: 課長）" class="form-control" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">雇用保険番号</label>
+          <div class="form-field-content">
+            <div class="form-input-wrapper">
+              <input type="text" formControlName="employmentInsuranceNumber" placeholder="例: 1234-567890-1 または 11桁" class="form-control" maxlength="20" />
+            </div>
+            <div *ngIf="form.get('employmentInsuranceNumber')?.invalid && form.get('employmentInsuranceNumber')?.touched" class="error-message">
+              {{ getErrorMessage('employmentInsuranceNumber') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 生年月日 (3連セレクト) -->
+        <div class="form-row">
+          <label class="form-label">
+            生年月日 <span class="required-badge">必須</span>
+          </label>
+          <div class="form-field-content">
+            <div class="date-select-group">
+              <select class="form-control select-year" [(ngModel)]="selectedBirthYear"
+                [ngModelOptions]="{standalone: true}" (change)="onBirthDatePartChange()">
+                <option value="">年を選択</option>
+                <option *ngFor="let y of years" [value]="y">{{ y }}年</option>
+              </select>
+
+              <select class="form-control select-month" [(ngModel)]="selectedBirthMonth"
+                [ngModelOptions]="{standalone: true}" (change)="onBirthDatePartChange()">
+                <option value="">月</option>
+                <option *ngFor="let m of months" [value]="m">{{ m }}月</option>
+              </select>
+
+              <select class="form-control select-day" [(ngModel)]="selectedBirthDay"
+                [ngModelOptions]="{standalone: true}" (change)="onBirthDatePartChange()">
+                <option value="">日</option>
+                <option *ngFor="let d of birthDays" [value]="d">{{ d }}日</option>
+              </select>
+            </div>
+            <div
+              *ngIf="form.get('dateOfBirth')?.invalid && (form.get('dateOfBirth')?.touched || form.get('dateOfBirth')?.dirty)"
+              class="error-message">
+              {{ getErrorMessage('dateOfBirth') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. 入社年月日 (3連セレクト) -->
+        <div class="form-row">
+          <label class="form-label">
+            入社年月日 <span class="required-badge">必須</span>
+          </label>
+          <div class="form-field-content">
+            <div class="date-select-group">
+              <select class="form-control select-year" [(ngModel)]="selectedHireYear"
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                <option value="">年を選択</option>
+                <option *ngFor="let y of hireYears" [value]="y">{{ y }}年</option>
+              </select>
+
+              <select class="form-control select-month" [(ngModel)]="selectedHireMonth"
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                <option value="">月</option>
+                <option *ngFor="let m of months" [value]="m">{{ m }}月</option>
+              </select>
+
+              <select class="form-control select-day" [(ngModel)]="selectedHireDay"
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                <option value="">日</option>
+                <option *ngFor="let d of hireDays" [value]="d">{{ d }}日</option>
+              </select>
+            </div>
+
+            <div *ngIf="isHireDateLocked" class="error-message">
+              ※ 入社年月日は変更できません。変更が必要な場合は社員情報を削除後、新規登録してください。
+            </div>
+
+            <div *ngIf="!isHireDateLocked && form.get('hireDate')?.touched && form.get('hireDate')?.invalid"
+              class="error-message">
+              {{ getErrorMessage('hireDate') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. 退職年月日 (3連セレクト) -->
+        <div class="form-row">
+          <label class="form-label">退職年月日</label>
+          <div class="form-field-content">
+            <div class="date-select-group">
+              <select class="form-control select-year" [(ngModel)]="selectedRetireYear"
+                [ngModelOptions]="{standalone: true}" (change)="onRetireDatePartChange()">
+                <option value="">年を選択</option>
+                <option *ngFor="let y of hireYears" [value]="y">{{ y }}年</option>
+              </select>
+
+              <select class="form-control select-month" [(ngModel)]="selectedRetireMonth"
+                [ngModelOptions]="{standalone: true}" (change)="onRetireDatePartChange()">
+                <option value="">月</option>
+                <option *ngFor="let m of months" [value]="m">{{ m }}月</option>
+              </select>
+
+              <select class="form-control select-day" [(ngModel)]="selectedRetireDay"
+                [ngModelOptions]="{standalone: true}" (change)="onRetireDatePartChange()">
+                <option value="">日</option>
+                <option *ngFor="let d of retireDays" [value]="d">{{ d }}日</option>
+              </select>
+            </div>
+            <div *ngIf="form.get('retirementDate')?.touched && form.get('retirementDate')?.invalid"
+              class="error-message">
+              {{ getErrorMessage('retirementDate') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 被扶養者（家族）セクション -->
+        <div class="dependent-section">
+          <div class="dependent-section-header">
+            <span class="dependent-title">▼ 被扶養者（家族） [{{ dependents.length }}名]</span>
+            <button type="button" class="btn-add-dep" *ngIf="!isEditingDependent" (click)="startAddDependent()">
+              + 家族追加
+            </button>
+          </div>
+
+          <!-- 社員本人年収（横並びインライン配置） -->
+          <div class="emp-income-bar">
+            <span class="emp-income-label">社員（本人）の年間収入見込</span>
+            <div class="emp-income-input-wrap">
+              <input type="number" class="dep-input emp-income-input" [(ngModel)]="employeeAnnualIncome"
+                [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
+                (input)="sanitizeEmployeeIncome()" />
+              <span class="unit-text">円</span>
+            </div>
+          </div>
+
+          <div *ngIf="dependents.length === 0 && !isEditingDependent" class="dependent-empty">
+            登録されている扶養家族はいません。
+          </div>
+
+          <!-- 家族一覧（アコーディオン表示） -->
+          <div class="dependent-list" *ngIf="dependents.length > 0">
+            <ng-container *ngFor="let dep of dependents; let i = index">
+              <div *ngIf="editingIndex !== i" class="dependent-item-row" [ngClass]="getDependentStatusClass(dep)"
+                (click)="startEditDependent(dep, i)">
+                <span class="dep-summary-text">
+                  <span class="dep-rel-badge">{{ getRelationshipText(dep.relationship) }}</span>
+                  <strong>{{ dep.name }}</strong>
+                  <span style="color: #64748b; font-size: 12px;">({{ getDependentAge(dep.dateOfBirth) }}歳)</span>
+                </span>
+
+                <div class="dep-summary-actions">
+                  <span class="dep-status-badge">{{ getDependentStatusBadgeText(dep) }}</span>
+                  <button type="button" class="btn-delete-dep" (click)="deleteDependent(i, $event)"
+                    title="削除">✕</button>
+                </div>
+              </div>
+
+              <div *ngIf="isEditingDependent && editingIndex === i" class="dep-edit-card">
+                <ng-container *ngTemplateOutlet="depFormTemplate"></ng-container>
+              </div>
+            </ng-container>
+          </div>
+
+          <div *ngIf="isEditingDependent && editingIndex === -1" class="dep-edit-card">
+            <ng-container *ngTemplateOutlet="depFormTemplate"></ng-container>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #depFormTemplate>
+        <div class="dep-form-grid" *ngIf="editingDependent">
+          <!-- 1. 氏名 -->
+          <div class="dep-form-col">
+            <label>氏名 <span class="required-badge">必須</span></label>
+            <input type="text" class="dep-input" [(ngModel)]="editingDependent.name"
+              [ngModelOptions]="{standalone: true}" placeholder="例: 山田 花子" maxlength="50" />
+          </div>
+
+          <!-- 2. 続柄 -->
+          <div class="dep-form-col">
+            <label>続柄 <span class="required-badge">必須</span></label>
+            <select class="dep-input" [(ngModel)]="editingDependent.relationship" [ngModelOptions]="{standalone: true}">
+              <option value="spouse">配偶者</option>
+              <option value="child">子・孫</option>
+              <option value="parent">父母・祖父母</option>
+              <option value="sibling">兄弟姉妹</option>
+              <option value="other">その他親族</option>
+            </select>
+          </div>
+
+          <!-- 3. 生年月日 (3連セレクト) -->
+          <div class="dep-form-col">
+            <label>生年月日 <span class="required-badge">必須</span></label>
+            <div class="dep-date-select-group">
+              <select class="dep-input dep-select-year" [(ngModel)]="selectedDepBirthYear"
+                [ngModelOptions]="{standalone: true}" (change)="onDepBirthDatePartChange()">
+                <option value="">年</option>
+                <option *ngFor="let y of years" [value]="y">{{ y }}年</option>
+              </select>
+              <select class="dep-input dep-select-month" [(ngModel)]="selectedDepBirthMonth"
+                [ngModelOptions]="{standalone: true}" (change)="onDepBirthDatePartChange()">
+                <option value="">月</option>
+                <option *ngFor="let m of months" [value]="m">{{ m }}月</option>
+              </select>
+              <select class="dep-input dep-select-day" [(ngModel)]="selectedDepBirthDay"
+                [ngModelOptions]="{standalone: true}" (change)="onDepBirthDatePartChange()">
+                <option value="">日</option>
+                <option *ngFor="let d of depBirthDays" [value]="d">{{ d }}日</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 4. 同居区分 -->
+          <div class="dep-form-col">
+            <label>同居区分</label>
+            <div class="dep-radio-group">
+              <label><input type="radio" [value]="true" [(ngModel)]="editingDependent.isLivingTogether"
+                  [ngModelOptions]="{standalone: true}"> 同居</label>
+              <label><input type="radio" [value]="false" [(ngModel)]="editingDependent.isLivingTogether"
+                  [ngModelOptions]="{standalone: true}"> 別居</label>
+            </div>
+          </div>
+
+          <!-- 5. 年収見込 -->
+          <div class="dep-form-col">
+            <label>年収見込</label>
+            <div class="dep-input-with-unit">
+              <input type="number" class="dep-input" [(ngModel)]="editingDependent.expectedAnnualIncome"
+                [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
+                (input)="sanitizeDepNumber('expectedAnnualIncome')" />
+              <span class="unit-text">円</span>
+            </div>
+          </div>
+
+          <!-- 6. 仕送り額（別居時のみ） -->
+          <div class="dep-form-col" *ngIf="!editingDependent.isLivingTogether">
+            <label>別居時仕送り額</label>
+            <div class="dep-input-with-unit">
+              <input type="number" class="dep-input" [(ngModel)]="editingDependent.remittanceAmount"
+                [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
+                (input)="sanitizeDepNumber('remittanceAmount')" />
+              <span class="unit-text">円/年</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dep-actions" *ngIf="editingDependent">
+          <label class="dep-checkbox-label">
+            <input type="checkbox" [(ngModel)]="editingDependent.isDisability" [ngModelOptions]="{standalone: true}">
+            障害者手帳等を所持
+          </label>
+          <button type="button" class="btn-dep-cancel" (click)="cancelEditDependent()">キャンセル</button>
+          <button type="button" class="btn-dep-save" (click)="saveDependent()">反映</button>
+        </div>
+      </ng-template>
+
+      <!-- ステップ 2: 報酬・保険履歴（Step2コンポーネントに委譲） -->
+      <div *ngIf="currentStep === 2" class="step-content">
+        <div *ngIf="isLoadingHistories" style="text-align: center; padding: 60px 20px; color: #64748b; font-size: 14px;">
+          履歴データを読み込んでいます...
+        </div>
+
+        <app-edit-employee-step2 *ngIf="!isLoadingHistories"
+          [employeeNumber]="form.get('employeeNumber')?.value"
+          [displayName]="getDisplayNameForModal()" 
+          [hireDate]="form.get('hireDate')?.value"
+          [retirementDate]="form.get('retirementDate')?.value" 
+          [insuranceRateMasters]="insuranceRateMasters"
+          [insuranceStandardList]="insuranceStandardList" 
+          [salaryStandardList]="salaryStandardList"
+          [bonusHistoryList]="bonusHistoryList" 
+          [hasPreviousInsurance]="hasPreviousInsurance"
+          [previousInsuranceAmount]="previousInsuranceAmount"
+          (insuranceStandardsChange)="onInsuranceStandardsChange($event)"
+          (salaryStandardsChange)="onSalaryStandardsChange($event)" 
+          (bonusHistoryChange)="onBonusHistoryChange($event)"
+          (previousInsuranceChange)="onPreviousInsuranceChange($event)">
+        </app-edit-employee-step2>
+      </div>
+    </form>
+
+    <!-- モーダルフッター -->
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancel()" [disabled]="isSaving">
+        キャンセル
+      </button>
+      <div class="button-spacer"></div>
+      <button *ngIf="currentStep > 1" class="btn btn-secondary" (click)="goToPreviousStep()" [disabled]="isSaving">
+        &lt; 前のステップ
+      </button>
+      <button *ngIf="currentStep < 2" class="btn btn-primary" (click)="goToNextStep()"
+        [disabled]="isSaving || !isStep1Valid">
+        次へ (Step 2) &gt;
+      </button>
+
+      <button *ngIf="currentStep === 2" class="btn btn-success" (click)="saveAndClose()"
+        [disabled]="isSaving || form.invalid">
+        {{ isSaving ? '保存中...' : '保存して閉じる' }}
+      </button>
+    </div>
+  </div>
+</div>

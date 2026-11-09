@@ -1,0 +1,224 @@
+<div class="simulator-changed-container">
+  <div class="simulator-header">
+    <button 
+      type="button"
+      class="toggle-btn"
+      (click)="toggleExpand()"
+      [class.expanded]="isExpanded">
+      <span class="toggle-icon">▶</span>
+      <span class="title">随時改定判定シミュレーター</span>
+    </button>
+  </div>
+
+  <div class="simulator-panel" *ngIf="isExpanded">
+    <!-- 設定カード：左・右カラムを明確に分離 -->
+    <div class="settings-card">
+      <!-- 1. 変動開始月 -->
+      <div class="control-row">
+        <label class="item-label">変動開始月：</label>
+        <div class="control-content">
+          <div class="change-month-inputs">
+            <input 
+              type="number"
+              [(ngModel)]="currentYear"
+              (change)="onChangeMonthChange()"
+              placeholder="YYYY"
+              min="2000"
+              max="2099"
+              class="year-input-sm">
+            <span class="separator">年</span>
+            <input 
+              type="number"
+              [(ngModel)]="currentMonth"
+              (change)="onChangeMonthChange()"
+              placeholder="MM"
+              min="1"
+              max="12"
+              class="month-input-sm">
+            <span class="separator">月</span>
+          </div>
+          <span class="prev-data-badge" *ngIf="hasPreviousData">
+            従前: {{ previousAmount | number: '1.0-0' }}円 ({{ previousGrade }}級)
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. 判定モード -->
+      <div class="control-row">
+        <label class="item-label">判定モード：</label>
+        <div class="control-content radio-inline-group">
+          <label class="radio-label">
+            <input 
+              type="radio"
+              [(ngModel)]="judgmentMode"
+              value="normal"
+              (change)="onModeChange()"
+              class="radio-input">
+            <span>通常改定</span>
+          </label>
+          <label class="radio-label">
+            <input 
+              type="radio"
+              [(ngModel)]="judgmentMode"
+              value="maternity-return"
+              (change)="onModeChange()"
+              class="radio-input">
+            <span>育休復帰特例</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. 変動区分（通常モード時のみ） -->
+      <div class="control-row" *ngIf="judgmentMode === 'normal'">
+        <label class="item-label">変動区分：</label>
+        <div class="control-content">
+          <select 
+            [(ngModel)]="changeDirection"
+            (change)="onRequirementChange()"
+            [disabled]="!hasPreviousData"
+            class="direction-select">
+            <option value="increase">増額 (+2等級以上)</option>
+            <option value="decrease">減額 (-2等級以上)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 4. 要件確認（通常モード時のみ） -->
+      <div class="control-row" *ngIf="judgmentMode === 'normal'">
+        <label class="item-label">要件確認：</label>
+        <div class="control-content checkbox-inline-group">
+          <label class="checkbox-label" [class.is-disabled]="!hasPreviousData">
+            <input 
+              type="checkbox"
+              [(ngModel)]="hasFixedWageChange"
+              (change)="onRequirementChange()"
+              [disabled]="!hasPreviousData"
+              class="checkbox-input">
+            <span>固定的賃金変動あり</span>
+          </label>
+          <label class="checkbox-label" [class.is-disabled]="!hasPreviousData">
+            <input 
+              type="checkbox"
+              [(ngModel)]="noRerequisitionIn3Months"
+              (change)="onRequirementChange()"
+              [disabled]="!hasPreviousData"
+              class="checkbox-input">
+            <span>対象3ヶ月内再変動なし</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月別入力（前月履歴がない場合は全体を非活性） -->
+    <div class="months-group" [class.is-disabled]="!hasPreviousData">
+      <div *ngFor="let month of months" class="month-input">
+        <label>{{ month.month }}月：</label>
+        <input 
+          type="number"
+          [(ngModel)]="month.amount"
+          (input)="onAmountChange()"
+          [disabled]="!hasPreviousData"
+          placeholder="0"
+          min="0"
+          step="1"
+          class="amount-input">
+        <span class="yen">円</span>
+        <label class="checkbox-label" [class.is-disabled]="!hasPreviousData">
+          <input 
+            type="checkbox"
+            [(ngModel)]="month.daysSufficient"
+            (change)="onDaysCheckChange()"
+            [disabled]="!hasPreviousData"
+            class="days-checkbox">
+          <span>支払基礎日数充足（17日/11日以上）</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p>※一般社員は17日以上、特定適用事業所の短時間労働者は11日以上で充足となります。</p>
+      <p>※育休復帰特例：短時間就労者でいずれの月も17日未満の場合は、15日以上の月を充足としてチェックしてください。</p>
+      <p>※最高等級および最低等級の境界では、一定の金額要件を満たす場合に1等級の変動でも随時改定の対象となります。</p>
+    </div>
+
+    <!-- 判定結果 & 警告エリア -->
+    <div *ngIf="simulationResult" 
+         class="result-group"
+         [class.has-warning]="simulationResult.warningMessages.length > 0">
+      
+      <div *ngIf="simulationResult.warningMessages.length > 0" class="warnings">
+        <div *ngFor="let msg of simulationResult.warningMessages" class="warning-item">
+          <span>⚠️</span><span>{{ msg }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="simulationResult.canApply" class="result-success">
+        <p class="result-label">判定結果：</p>
+        <p class="result-value">
+          3ヶ月平均 {{ simulationResult.averageAmount | number: '1.0-0' }} 円 → 
+          <strong>{{ simulationResult.calculatedGradeDisplay }}</strong>
+        </p>
+      </div>
+
+      <div *ngIf="!simulationResult.canApply && simulationResult.warningMessages.length === 0" class="result-info">
+        <p class="result-label">判定結果：</p>
+        <p class="result-value">判定不可</p>
+      </div>
+    </div>
+
+    <!-- アクションボタン -->
+    <div class="actions">
+      <button 
+        type="button"
+        class="apply-btn"
+        (click)="applyOverwrite()"
+        [disabled]="!simulationResult?.canApply">
+        {{ getMonth4Display() }} 履歴に自動反映
+      </button>
+      <button 
+        type="button"
+        class="clear-btn"
+        (click)="clearInputs()"
+        [disabled]="!hasPreviousData">
+        入力クリア
+      </button>
+      <button 
+        type="button"
+        class="close-btn"
+        (click)="closePanel()">
+        シミュレーターを閉じる
+      </button>
+    </div>
+  </div>
+
+  <!-- 上書き確認ダイアログ -->
+  <div *ngIf="showOverwriteConfirm" class="overwrite-confirm-overlay">
+    <div class="overwrite-confirm-dialog">
+      <h3>既存履歴の確認</h3>
+      <p class="target-note">※ 以下の履歴は、改定期間に合わせて終了月の短縮または前後への分割が行われます。</p>
+      <div class="target-list">
+        <div *ngFor="let target of overwriteTargets" class="target-item-card">
+          <div class="target-period-badge">
+            <span class="calendar-icon">📅</span>
+            <span class="period-text">{{ target.currentPeriod }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button 
+          type="button"
+          class="confirm-btn"
+          (click)="confirmOverwrite()">
+          上書き反映を実行
+        </button>
+        <button 
+          type="button"
+          class="cancel-btn"
+          (click)="cancelOverwrite()">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

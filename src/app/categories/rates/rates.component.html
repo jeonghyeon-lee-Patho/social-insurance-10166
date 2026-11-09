@@ -1,0 +1,87 @@
+<div class="rates-container">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>保険基準管理</h1>
+    </div>
+
+    <!-- ローディング表示 -->
+    <div *ngIf="isLoading" class="loading-spinner">
+      <p>読み込み中...</p>
+    </div>
+
+    <!-- 保険基準カード一覧 -->
+    <div *ngIf="!isLoading" class="rates-grid">
+      <!-- 既存カード一覧 -->
+      <div *ngFor="let rate of insuranceRates" class="rate-card">
+        <!-- カードヘッダー -->
+        <div class="card-header">
+          <div class="insurance-type-badge" [class.kyokai]="rate.type === InsuranceType.KYOKAI"
+            [class.kumiai]="rate.type === InsuranceType.KUMIAI">
+            {{ rate.type === InsuranceType.KYOKAI ? '[協会けんぽ]' : '[組合健保]' }}
+          </div>
+          <h3 class="rate-name">{{ rate.name }}</h3>
+        </div>
+
+        <!-- カード内容（余白を圧縮） -->
+        <div class="card-body">
+          <div class="info-row">
+            <span class="label">* 適用地域:</span>
+            <span class="value">{{ rate.type === InsuranceType.KYOKAI ? (rate.prefecture || getRegionLabel(rate.region))
+              : '全国共通 (組合独自)' }}</span>
+          </div>
+
+          <!-- 健康保険 -->
+          <div class="info-row">
+            <span class="label">* 健康保険:</span>
+            <span class="value">{{ rate.rates.healthInsurance | number:'1.2-2' }}%</span>
+            <span class="ratio-badge">
+              {{ rate.burdenRatio.employee | number:'1.1-1' }} : {{ rate.burdenRatio.employer | number:'1.1-1' }}
+            </span>
+          </div>
+
+          <!-- 介護保険 -->
+          <div class="info-row">
+            <span class="label">* 介護保険:</span>
+            <span class="value">{{ rate.rates.careInsurance | number:'1.2-2' }}%</span>
+            <span class="ratio-badge">
+              {{ (rate.burdenRatioCare ? rate.burdenRatioCare.employee : 50) | number:'1.1-1' }} : {{
+              (rate.burdenRatioCare ? rate.burdenRatioCare.employer : 50) | number:'1.1-1' }} </span>
+          </div>
+
+          <!-- 厚生年金 (法定固定) -->
+          <div class="info-row">
+            <span class="label">* 厚生年金:</span>
+            <span class="value">{{ rate.rates.pensionInsurance | number:'1.2-2' }}%</span>
+            <span class="ratio-badge">50.0 : 50.0</span>
+          </div>
+        </div>
+
+        <!-- 適用人数 & ボタン -->
+        <div class="card-footer">
+          <div class="employee-count">
+            <span class="label">適用人数:</span>
+            <span class="value">{{ rate.applicableEmployeeCount }}名</span>
+          </div>
+
+          <div class="actions">
+            <button class="btn-edit" (click)="openEditModal(rate)">編集</button>
+            <button class="btn-delete" (click)="deleteRate(rate)" [disabled]="isDeleteDisabled(rate)">削除</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 常に末尾に残る「新規追加カード」 -->
+      <div class="rate-card add-rate-card" (click)="openAddModal()" role="button" tabindex="0">
+        <div class="add-card-inner">
+          <span class="add-icon">+</span>
+          <span class="add-text">保険基準を追加する</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 編集モーダル -->
+<app-edit-insurance-rate-modal [isOpen]="showEditModal" [selectedRate]="selectedRate" [currentUser]="currentUser"
+  [existingRates]="insuranceRates" (onClose)="closeEditModal()" (onSave)="onRateSaved()">
+</app-edit-insurance-rate-modal>

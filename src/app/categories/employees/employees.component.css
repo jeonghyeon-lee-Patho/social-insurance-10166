@@ -1,0 +1,421 @@
+.employee-container {
+  width: 100%;
+  height: 100%;
+  background-color: #f8fafc;
+  padding: 20px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-wrapper {
+  max-width: 1600px;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 20px 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
+.page-header {
+  width: 100%;
+  min-width: 800px;
+  margin: 0 auto 15px auto;
+  flex-shrink: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #0f172a;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 10px;
+}
+
+/* ツールバーとテーブルを一体化した単一カード */
+.table-card {
+  min-width: 800px;
+  width: 100%;
+  flex: 1 1 0%;
+  min-height: 0;
+  box-sizing: border-box;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 一体化カードの上部ツールバー */
+.card-toolbar {
+  padding: 14px 20px;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ツールバー 1段目 */
+.toolbar-primary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* ツールバー 2段目（状態トグル） */
+.toolbar-secondary-row {
+  display: flex;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px dashed #edf2f7;
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* 右側メタ情報エリア（凡例 ＋ 人数バッジ） */
+.toolbar-right-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* ミニ凡例 */
+.employee-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #64748b;
+  user-select: none;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-box {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid #fcd34d;
+}
+.box-missing {
+  background-color: #fef3c7;
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-danger {
+  background-color: #ef4444;
+}
+
+.employee-count-badge {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.employee-count-badge strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+/* 入力・セレクト */
+.search-box {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.search-input::placeholder {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.sort-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.status-filter-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.sort-box label,
+.status-filter-box label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.sort-select {
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+/* ラジオボタン群 */
+.radio-group {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.radio-label input[type="radio"] {
+  cursor: pointer;
+  margin: 0;
+}
+
+/* 社員追加ボタン */
+.btn-add-employee {
+  padding: 8px 16px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-add-employee:hover {
+  background-color: #059669;
+}
+
+/* テーブル領域（垂直スクロール領域を完全確保） */
+.table-scroll-area {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  border-top: 1px solid #e2e8f0;
+}
+
+.employees-table {
+  width: 100%;
+  min-width: 700px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.employees-table thead {
+  text-align: left;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.employees-table th {
+  padding: 12px 14px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.employees-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 2;
+  border-bottom: 2px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.employees-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.employees-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.employees-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.employees-table td {
+  padding: 6px 12px;
+  color: #1e293b;
+}
+
+.col-employee-number { width: 18%; } 
+.col-name            { width: 26%; } 
+.col-birth-date      { width: 18%; } 
+.col-hire-date       { width: 14%; } 
+.col-retirement-date { width: 14%; } 
+.col-actions         { width: 10%; } 
+
+.employees-table td.col-employee-number {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.employees-table td.col-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.name-cell-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.employee-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dependent-danger-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  flex-shrink: 0;
+}
+
+.employees-table td.col-birth-date,
+.employees-table th.col-birth-date,
+.employees-table th.col-hire-date,
+.employees-table td.col-hire-date,
+.employees-table th.col-retirement-date,
+.employees-table td.col-retirement-date,
+.employees-table th.col-actions,
+.employees-table td.col-actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 給与履歴漏れ行のスタイル（3pxアクセントバー付き） */
+.employees-table tbody tr.warning-highlight {
+  background-color: #fffbeb !important;
+}
+
+.employees-table tbody tr.warning-highlight:hover {
+  background-color: #fef3c7 !important;
+}
+
+/* ボタン群 */
+.btn-delete {
+  padding: 4px 6px;
+  margin-right: -4px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-delete {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-delete:hover {
+  background-color: #fecaca;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+/* メッセージ表示 */
+.loading-message,
+.no-data-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* スクロールバー装飾 */
+.table-scroll-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-scroll-area::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.table-scroll-area::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+
+.table-scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+

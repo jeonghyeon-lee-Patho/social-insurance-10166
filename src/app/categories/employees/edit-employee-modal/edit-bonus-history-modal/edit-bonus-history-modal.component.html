@@ -1,0 +1,122 @@
+<!-- 賞与額支給実績 編集モーダル -->
+<div class="modal-backdrop" *ngIf="isOpen">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">
+        {{ isEditing ? '賞与額支給実績を編集' : '賞与額支給実績を追加' }}
+      </h2>
+      <button type="button" class="modal-close-btn" (click)="onCancel()" title="閉じる">✕</button>
+    </div>
+
+    <div class="error-messages" *ngIf="errors.length > 0">
+      <div class="error-item" *ngFor="let error of errors">
+        <span class="error-icon">⚠</span>
+        <span class="error-text">{{ error }}</span>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <!-- 支給年月 -->
+      <div class="form-group">
+        <label class="form-label" for="paymentYear">支給年月 <span class="required">*</span></label>
+        <div class="input-group-inline">
+          <input type="number" id="paymentYear" [(ngModel)]="paymentYear" (change)="onDateOrAmountChange()"
+            placeholder="YYYY" min="1950" max="2050" class="form-control year-input" />
+          <span class="separator">年</span>
+          <input type="number" id="paymentMonth" [(ngModel)]="paymentMonth" (change)="onDateOrAmountChange()"
+            placeholder="MM" min="1" max="12" class="form-control month-input" />
+          <span class="separator">月</span>
+        </div>
+      </div>
+
+      <!-- 実支給額 -->
+      <div class="form-group">
+        <label class="form-label" for="actualPaymentAmount">実支給額（円）<span class="required">*</span></label>
+        <div class="form-control-wrapper">
+          <div class="input-wrapper">
+            <input type="number" id="actualPaymentAmount" [(ngModel)]="actualPaymentAmount"
+              (input)="onDateOrAmountChange()" placeholder="0" min="1000" step="1" class="form-control amount-input" />
+            <span class="input-suffix">円</span>
+          </div>
+          <div class="form-hint">
+            ※ 同一月に複数回支給された場合は、合算額を入力してください。
+          </div>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- 健保 標準賞与額 (実支給額と同様の左側配置) -->
+      <div class="form-group">
+        <label class="form-label" for="healthStandardBonusAmount">
+          健保 標準賞与額 <span class="required">*</span>
+        </label>
+        <div class="form-control-wrapper">
+          <div class="input-wrapper">
+            <input type="number" id="healthStandardBonusAmount" [(ngModel)]="healthStandardBonusAmount"
+              (input)="onStandardBonusAmountChange()" placeholder="0" min="0" step="1000"
+              class="form-control amount-input" />
+            <span class="input-suffix">円</span>
+          </div>
+          <div class="form-hint" [class.warning]="healthInsuranceTotal + (healthStandardBonusAmount || 0) > 5730000">
+            ({{ fiscalYear }}年度累計: {{ (healthInsuranceTotal + (healthStandardBonusAmount || 0)) | number:'1.0-0' }} 円 /
+            573万円)
+          </div>
+        </div>
+      </div>
+
+      <div class="warning-box" *ngIf="futureBonusCapError"
+        style="background-color: #fef2f2; border-left: 3px solid #ef4444; margin: 10px 0;">
+        <p class="warning-text" style="color: #991b1b; font-weight: 500; line-height: 1.5;">
+          ⚠ {{ futureBonusCapError }}
+        </p>
+      </div>
+
+      <!-- 厚生 標準賞与額 (実支給額と同様の左側配置) -->
+      <div class="form-group">
+        <label class="form-label" for="pensionStandardBonusAmount">
+          厚生 標準賞与額 <span class="required">*</span>
+        </label>
+        <div class="form-control-wrapper">
+          <div class="input-wrapper">
+            <input type="number" id="pensionStandardBonusAmount" [(ngModel)]="pensionStandardBonusAmount"
+              (input)="onStandardBonusAmountChange()" placeholder="0" min="0" step="1000"
+              class="form-control amount-input" />
+            <span class="input-suffix">円</span>
+          </div>
+          <div class="form-hint" [class.warning]="(pensionStandardBonusAmount || 0) > 1500000">
+            (1回あたり上限: 150万円)
+          </div>
+        </div>
+      </div>
+
+      <!-- 年4回以上支給時の警告 -->
+      <div class="warning-box" *ngIf="bonusCountWarning">
+        <p class="warning-text">{{ bonusCountWarning }}</p>
+      </div>
+
+      <!-- 情報ボックス -->
+      <div class="info-box">
+        <div class="info-title"><strong>※ 標準賞与額の算出・入力基準</strong></div>
+        <ul class="info-list">
+          <li>
+            <strong>端数・上限処理：</strong>
+            実支給額の千円未満を切り捨て後、法定上限（健保・介護：年度累計573万円／厚年：1回150万円）が自動適用されます。手動調整時も必ず千円単位で入力してください。
+          <li>
+            <strong>二以上事業所勤務（兼業・副業）：</strong>
+            他社支給分を含む累計上限は自動判定されません。年金事務所の決定通知書を確認し、確定額へ手動で補正してください。
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">
+        キャンセル
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSaveClick()">
+        {{ isEditing ? '更新' : '追加' }}
+      </button>
+    </div>
+  </div>
+</div>

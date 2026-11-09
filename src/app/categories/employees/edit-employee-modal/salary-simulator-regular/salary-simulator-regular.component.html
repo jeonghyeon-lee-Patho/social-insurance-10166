@@ -1,0 +1,107 @@
+<div class="simulator-regular-container">
+  <div class="simulator-header">
+    <button 
+      type="button"
+      class="toggle-btn"
+      (click)="toggleExpand()"
+      [class.expanded]="isExpanded">
+      <span class="toggle-icon">▶</span>
+      <span class="title">定時決定判定シミュレーター</span>
+    </button>
+  </div>
+
+  <div class="simulator-panel" *ngIf="isExpanded">
+    <div class="setting-group">
+      <label>判定年度：</label>
+      <input 
+        type="number"
+        [(ngModel)]="currentYear"
+        (change)="onYearChange()"
+        class="year-input">
+      <span class="year-label">年 (4〜6月実績ベース)</span>
+    </div>
+
+    <div class="months-group">
+      <div *ngFor="let month of months" class="month-input" [class.is-disabled]="!isMonthEligible(month.month)">
+        <label>{{ month.month }}月：</label>
+        <input 
+          type="number"
+          [(ngModel)]="month.amount"
+          (input)="onAmountChange()"
+          [disabled]="!isMonthEligible(month.month)"
+          placeholder="0"
+          min="0"
+          step="1"
+          class="amount-input">
+        <span class="yen">円</span>
+        
+        <label class="checkbox-label">
+          <input 
+            type="checkbox"
+            [(ngModel)]="month.daysSufficient"
+            (change)="onDaysCheckChange()"
+            [disabled]="!isMonthEligible(month.month)"
+            class="days-checkbox">
+          <span>支払基礎日数充足（17日/11日以上）</span>
+        </label>
+
+        <!-- 対象外バッジ -->
+        <span *ngIf="!isMonthEligible(month.month)" class="ineligible-badge">
+          ※対象外
+        </span>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p>※一般社員は17日以上、特定適用事業所の短時間労働者は11日以上で充足となります。</p>
+      <p>※短時間就労者でいずれの月も17日未満の場合は、15日以上の月を充足としてチェックしてください。</p>
+    </div>
+
+    <div *ngIf="simulationResult" class="result-group" [class.has-warning]="simulationResult.warningMessages.length > 0">
+      <div *ngIf="simulationResult.warningMessages.length > 0" class="warnings">
+        <div *ngFor="let msg of simulationResult.warningMessages" class="warning-item">
+          ⚠️ {{ msg }}
+        </div>
+      </div>
+
+      <div *ngIf="simulationResult.canApply" class="result-success">
+        <p class="result-label">判定結果：</p>
+        <p class="result-value">
+          {{ simulationResult.sufficientMonthsCount }}ヶ月平均 {{ simulationResult.averageAmount | number: '1.0-0' }} 円 → 
+          <strong>{{ simulationResult.calculatedGradeDisplay }}</strong>
+        </p>
+        <p class="target-period-hint">
+          反映予定期間：{{ simulationResult.targetStartYear }}/{{ simulationResult.targetStartMonth | number: '2.0-0' }} 〜 
+          {{ simulationResult.targetEndYear }}/{{ simulationResult.targetEndMonth | number: '2.0-0' }}
+        </p>
+      </div>
+
+      <div *ngIf="!simulationResult.canApply && simulationResult.warningMessages.length === 0" class="result-info">
+        <p class="result-label">判定結果：</p>
+        <p class="result-value">判定不可</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button 
+        type="button"
+        class="apply-btn"
+        (click)="applyToSeptember()"
+        [disabled]="!simulationResult?.canApply">
+        9月履歴に自動反映
+      </button>
+      <button 
+        type="button"
+        class="clear-btn"
+        (click)="clearInputs()">
+        入力クリア
+      </button>
+      <button 
+        type="button"
+        class="close-btn"
+        (click)="closePanel()">
+        シミュレーターを閉じる
+      </button>
+    </div>
+  </div>
+</div>

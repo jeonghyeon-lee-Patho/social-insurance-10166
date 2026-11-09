@@ -1,0 +1,49 @@
+<header class="global-header">
+  <div class="header-container">
+    <!-- Logo and Service Name -->
+    <div class="logo-section">
+      <button class="logo-button" (click)="navigateToHome()" aria-label="ホームへ移動">
+        <span class="logo-text">SociCal</span>
+      </button>
+    </div>
+
+    <!-- Category Navigation Tabs -->
+    <nav class="tab-navigation">
+      <button class="tab-button" [class.active]="activeTab === 'premium'" (click)="navigateToTab('premium')"
+        aria-label="社員別保険料タブ">
+        社員別保険料
+      </button>
+      <button class="tab-button" [class.active]="activeTab === 'employees'" (click)="navigateToTab('employees')"
+        aria-label="社員情報タブ">
+        社員情報
+      </button>
+      <button class="tab-button" [class.active]="activeTab === 'rates'" (click)="navigateToTab('rates')"
+        aria-label="保険基準タブ">
+        保険基準
+      </button>
+    </nav>
+
+    <!-- Organization and Account Section -->
+    <div class="account-section">
+      <!-- Organization Name -->
+      <div class="organization-name-container">
+        <div class="organization-name-display" *ngIf="!isEditingOrganization">
+          <span class="org-name" (click)="startEditingOrganization()" title="クリックで編集">
+            {{ organizationName }}
+          </span>
+        </div>
+        <div class="organization-name-edit" *ngIf="isEditingOrganization">
+          <input #orgNameInput type="text" class="org-name-input" [(ngModel)]="editedOrgName"
+            placeholder="事業所名を入力（15文字以内）" (keyup.enter)="saveOrganizationName()" (blur)="saveOrganizationName()"
+            (keyup.escape)="cancelEditingOrganization()" maxlength="15" />
+        </div>
+      </div>
+
+      <!-- User Email and Logout -->
+      <div class="user-info">
+        <span class="user-email">{{ userEmail }}</span>
+        <button class="logout-button" (click)="logout()">ログアウト</button>
+      </div>
+    </div>
+  </div>
+</header>

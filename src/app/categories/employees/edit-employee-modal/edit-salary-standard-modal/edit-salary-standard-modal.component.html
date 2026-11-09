@@ -1,0 +1,109 @@
+<!-- 報酬月額（給与等級）編集モーダル -->
+<div class="modal-backdrop" *ngIf="isOpen">
+  <div class="modal-content">
+    <!-- ヘッダー -->
+    <div class="modal-header">
+      <h2 class="modal-title">
+        {{ isEditing ? '標準報酬月額を編集' : '標準報酬月額を追加' }}
+      </h2>
+      <button type="button" class="modal-close-btn" (click)="onCancel()" title="閉じる">
+        ✕
+      </button>
+    </div>
+
+    <!-- エラーメッセージ -->
+    <div class="error-messages" *ngIf="errors.length > 0">
+      <div class="error-item" *ngFor="let error of errors">
+        <span class="error-icon">⚠</span>
+        <span class="error-text">{{ error }}</span>
+      </div>
+    </div>
+
+    <!-- モーダルボディ -->
+    <div class="modal-body">
+      <!-- 適用期間セクション -->
+      <div class="form-section">
+        <h3 class="section-title">適用期間</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="startYear">適用開始年月 <span class="required">*</span></label>
+          <div class="input-group-inline">
+            <input type="number" id="startYear" [(ngModel)]="startYear" placeholder="YYYY" min="1950" max="2050"
+              class="form-control year-input" />
+            <span class="separator">年</span>
+            <input type="number" id="startMonth" [(ngModel)]="startMonth" placeholder="MM" min="1" max="12"
+              class="form-control month-input" />
+            <span class="separator">月</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="endYear">適用終了年月 <span class="required">*</span></label>
+          <div class="input-group-inline">
+            <input type="number" id="endYear" [(ngModel)]="endYear" placeholder="YYYY" min="1950" max="2050"
+              class="form-control year-input" />
+            <span class="separator">年</span>
+            <input type="number" id="endMonth" [(ngModel)]="endMonth" placeholder="MM" min="1" max="12"
+              class="form-control month-input" />
+            <span class="separator">月</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 報酬額セクション -->
+      <div class="form-section">
+        <h3 class="section-title">報酬月額と等級</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="monthlyAmount">報酬月額（円）<span class="required">*</span></label>
+          <div class="form-control-wrapper">
+            <div class="input-wrapper">
+              <input type="number" id="monthlyAmount" [(ngModel)]="monthlyAmount" (input)="onMonthlyAmountChange()"
+                placeholder="0" min="1" step="1" class="form-control amount-input" />
+              <span class="input-suffix">円</span>
+            </div>
+            <div class="form-hint">
+              ※ 1円以上で入力してください。マイナス値は設定できません。
+            </div>
+          </div>
+        </div>
+
+        <!-- 自動計算された等級の表示 -->
+        <div class="form-group" *ngIf="calculatedGradeDisplay">
+          <label class="form-label">標準報酬等級</label>
+          <div class="grade-display">
+            <span class="grade-badge">{{ calculatedGradeDisplay }}</span>
+            <span class="grade-note">
+              （標準報酬月額 {{ calculatedStandardAmount | number:'1.0-0' }} 円に対応）
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 情報ボックス -->
+      <div class="info-box">
+        <div class="info-title"><strong>※ 報酬月額の入力・算出基準</strong></div>
+        <ul class="info-list">
+          <li>
+            <strong>等級の自動判定：</strong>
+            入力された報酬月額に基づき、健康保険（1～50等級）および厚生年金（1～35等級）の標準報酬月額が自動判定されます。
+          </li>
+          <li>
+            <strong>二以上事業所勤務（兼業・副業）：</strong>
+            他社との合算により年金事務所から決定通知書が届いている場合は、通知された按分額を入力してください。
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- フッター -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">
+        キャンセル
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSaveClick()">
+        {{ isEditing ? '更新' : '追加' }}
+      </button>
+    </div>
+  </div>
+</div>

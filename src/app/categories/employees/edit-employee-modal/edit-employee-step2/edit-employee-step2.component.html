@@ -1,0 +1,220 @@
+<!-- ステップ 2: 報酬・保険履歴 コンテンツ -->
+<div class="step2-content">
+  <!-- 社員情報サマリー -->
+  <div class="employee-summary">
+    <span class="summary-label">社員情報:</span>
+    <span class="summary-value">[{{ employeeNumber }}] {{ displayName }}</span>
+  </div>
+
+  <!-- [1] 社会保険適用基準および資格・免除履歴 -->
+  <section class="history-section insurance-section">
+    <div class="section-header">
+      <h3 class="section-title">
+        [1] 社会保険適用基準および資格・免除履歴
+      </h3>
+      <button type="button" class="btn btn-sm btn-primary add-history-btn" (click)="openInsuranceStandardModal()">
+        + 履歴追加
+      </button>
+    </div>
+
+    <!-- 履歴テーブル -->
+    <div class="history-table-container">
+      <table class="history-table" *ngIf="insuranceStandardList.length > 0; else noInsuranceRecords">
+        <thead>
+          <tr>
+            <th class="col-period">適用期間</th>
+            <th class="col-standard">適用基準</th>
+            <th class="col-exception">特例区分</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="insuranceStandardList.length > 0">
+          <tr *ngFor="let record of insuranceStandardList; let i = index">
+            <td class="col-period">{{ record.effectivePeriod }}</td>
+            <td class="col-standard">{{ record.insuranceRateMasterName }}</td>
+            <td class="col-exception">{{ record.exceptionTypeLabel }}</td>
+            <td class="col-actions">
+              <div class="actions-wrapper">
+                <button type="button" class="btn-action edit" (click)="openInsuranceStandardModal(record)" title="編集">
+                  編集
+                </button>
+                <span class="action-divider">|</span>
+                <button type="button" class="btn-action delete" (click)="deleteInsuranceStandard(i)"
+                [disabled]="isHireDateRecord(record)" title="削除">
+                  削除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noInsuranceRecords>
+        <div class="no-records-message">
+          適用基準が登録されていません。[ + 履歴追加 ] ボタンをクリックして登録してください。
+        </div>
+      </ng-template>
+    </div>
+  </section>
+
+  <!-- [2] 標準報酬月額(給与) 等級履歴 -->
+  <section class="history-section salary-section">
+    <div class="section-header">
+      <h3 class="section-title">
+        [2] 標準報酬月額(給与) 等級履歴
+      </h3>
+      <button type="button" class="btn btn-sm btn-primary add-history-btn" (click)="openSalaryStandardModal()">
+        + 履歴追加
+      </button>
+    </div>
+
+    <!-- 履歴テーブル -->
+    <div class="history-table-container">
+      <table class="history-table" *ngIf="salaryStandardList.length > 0; else noSalaryRecords">
+        <thead>
+          <tr>
+            <th class="col-period">適用期間</th>
+            <th class="col-amount">報酬月額</th>
+            <th class="col-grade">標準報酬等級</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="salaryStandardList.length > 0">
+          <tr *ngFor="let record of salaryStandardList; let i = index">
+            <td class="col-period">{{ record.effectivePeriod }}</td>
+            <td class="col-amount">{{ record.monthlyAmountDisplay }}</td>
+            <td class="col-grade">{{ record.salaryGradeDisplay }}</td>
+            <td class="col-actions">
+              <div class="actions-wrapper">
+                <button type="button" class="btn-action edit" (click)="openSalaryStandardModal(record)" title="編集">
+                  編集
+                </button>
+                <span class="action-divider">|</span>
+                <button type="button" class="btn-action delete" (click)="deleteSalaryStandard(i)" title="削除">
+                  削除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noSalaryRecords>
+        <div class="no-records-message">
+          給与履歴が登録されていません。[ + 履歴追加 ] ボタンをクリックして登録してください。
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- === シミュレーター統合 === -->
+    <div class="simulators-wrapper">
+      <!-- 定時決定判定シミュレーター -->
+      <app-salary-simulator-regular #regularSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
+        [retirementDate]="retirementDate" (applied)="onRegularDecisionApplied($event)"
+        (closed)="onRegularDecisionClosed()">
+      </app-salary-simulator-regular>
+
+      <!-- 随時改定判定シミュレーター -->
+      <app-salary-simulator-changed #varChangedSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
+        [retirementDate]="retirementDate" (applied)="onVarChangedDecisionApplied($event)"
+        (closed)="onVarChangedDecisionClosed()">
+      </app-salary-simulator-changed>
+    </div>
+  </section>
+
+  <!-- [3] 賞与額(標準賞与額) 支給実績 -->
+  <section class="history-section bonus-section">
+    <div class="section-header">
+      <h3 class="section-title">
+        [3] 賞与額(標準賞与額) 支給実績
+      </h3>
+      <button type="button" class="btn btn-sm btn-primary add-history-btn" (click)="openBonusHistoryModal()">
+        + 履歴追加
+      </button>
+    </div>
+
+    <!-- 前職通算情報 -->
+    <div class="bonus-meta-card" [class.is-checked]="hasPreviousInsurance">
+      <div class="meta-card-header">
+        <label class="checkbox-inline">
+          <input type="checkbox" [(ngModel)]="hasPreviousInsurance" (change)="onPreviousInsuranceToggle()" />
+          <span class="checkbox-title">同一保険者からの転職 (前職通算)</span>
+        </label>
+      </div>
+
+      <div class="meta-card-body" *ngIf="hasPreviousInsurance">
+        <label class="prev-amount-label" for="prevAmount">
+          前職賞与額 (4/1以降):
+        </label>
+        <div class="input-wrapper-sm">
+          <input type="number" id="prevAmount" [(ngModel)]="previousInsuranceAmount"
+            (ngModelChange)="onPreviousAmountChange()" class="form-control prev-amount-input" placeholder="0" min="0"
+            step="1000" />
+          <span class="unit-suffix">円</span>
+        </div>
+        <span class="prev-hint">
+          ※ 健康保険の{{ hireFiscalYear ? hireFiscalYear : '' }}累計に合算
+        </span>
+      </div>
+    </div>
+
+    <!-- 履歴テーブル -->
+    <div class="history-table-container">
+      <table class="history-table" *ngIf="bonusHistoryList.length > 0; else noBonusRecords">
+        <thead>
+          <tr>
+            <th class="col-bonus-period">支給年月</th>
+            <th class="col-bonus-amount">支給額</th>
+            <th class="col-bonus-health">健保標準額</th>
+            <th class="col-bonus-pension">厚生標準額</th>
+            <th class="col-bonus-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of bonusHistoryList; let i = index">
+            <td class="col-bonus-period">{{ record.paymentPeriod }}</td>
+            <td class="col-bonus-amount">{{ record.actualPaymentAmountDisplay }}</td>
+            <td class="col-bonus-health">{{ record.healthStandardBonusAmountDisplay }}</td>
+            <td class="col-bonus-pension">{{ record.pensionStandardBonusAmountDisplay }}</td>
+            <td class="col-bonus-actions">
+              <div class="actions-wrapper">
+                <button type="button" class="btn-action edit" (click)="openBonusHistoryModal(record)" title="編集">
+                  編集
+                </button>
+                <span class="action-divider">|</span>
+                <button type="button" class="btn-action delete" (click)="deleteBonusHistory(i)" title="削除">
+                  削除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noBonusRecords>
+        <div class="no-records-message">
+          賞与支給実績が登録されていません。[ + 履歴追加 ] ボタンをクリックして登録してください。
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="notes">
+      <p>※年4回以上定期支給される賞与は標準賞与額ではなく毎月の報酬月額に算入されます。</p>
+    </div>
+  </section>
+</div>
+
+<!-- 社会保険適用基準編集モーダル（サブモーダル） -->
+<app-edit-insurance-standard-modal [isOpen]="isInsuranceStandardModalOpen" [selectedRecord]="selectedInsuranceStandard"
+  [isFirstRecord]="isEditingFirstRecord" [hireDate]="hireDate" [retirementDate]="retirementDate"
+  [insuranceRateMasters]="insuranceRateMasters" [existingRecords]="insuranceStandardList"
+  (onClose)="closeInsuranceStandardModal()"
+  (onSave)="saveInsuranceStandard($event)"></app-edit-insurance-standard-modal>
+
+<!-- 報酬月額編集モーダル（サブモーダル） -->
+<app-edit-salary-standard-modal [isOpen]="isSalaryStandardModalOpen" [selectedRecord]="selectedSalaryStandard"
+  [hireDate]="hireDate" [retirementDate]="retirementDate" [existingRecords]="salaryStandardList"
+  (onClose)="closeSalaryStandardModal()" (onSave)="saveSalaryStandard($event)"></app-edit-salary-standard-modal>
+
+<!-- 賞与額支給実績編集モーダル（サブモーダル） -->
+<app-edit-bonus-history-modal [isOpen]="isBonusHistoryModalOpen" [selectedRecord]="selectedBonusHistory"
+  [hireDate]="hireDate" [retirementDate]="retirementDate" [existingRecords]="bonusHistoryList"
+  [previousInsuranceAmount]="previousInsuranceAmount || 0" (onClose)="closeBonusHistoryModal()"
+  (onSave)="saveBonusHistory($event)"></app-edit-bonus-history-modal>
