@@ -1,7 +1,6 @@
 import { CommonModule } from "@angular/common";
 import { Component, OnInit, inject, ChangeDetectorRef, OnDestroy } from "@angular/core";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { GlobalHeaderComponent } from "../../global-header/global-header.component";
 import { Auth, authState, User } from '@angular/fire/auth';
 import { Firestore, collection, query, where, getDocs, doc, deleteDoc, setDoc } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
@@ -12,7 +11,7 @@ import { EditInsuranceRateModalComponent } from './edit-insurance-rate-modal/edi
 @Component({
   selector: 'app-rates',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, GlobalHeaderComponent, EditInsuranceRateModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, EditInsuranceRateModalComponent],
   templateUrl: './rates.component.html',
   styleUrl: './rates.component.css'
 })

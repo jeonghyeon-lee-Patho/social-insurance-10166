@@ -1,7 +1,4 @@
 <div class="employee-container">
-  <app-edit-employee-modal *ngIf="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
-    (onClose)="closeEditModal()" (onSave)="onEmployeeSaved($event)"></app-edit-employee-modal>
-
   <div class="content-wrapper">
     <div class="page-header">
       <h1>社員情報</h1>
@@ -131,3 +128,10 @@
     </div>
   </div>
 </div>
+
+<!-- 編集モーダル -->
+<app-edit-employee-modal *ngIf="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
+  (onClose)="closeEditModal()" (onSave)="onEmployeeSaved($event)"></app-edit-employee-modal>
+
+
+  

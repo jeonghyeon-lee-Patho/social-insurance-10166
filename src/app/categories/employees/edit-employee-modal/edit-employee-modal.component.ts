@@ -39,7 +39,6 @@ export class EditEmployeeModalComponent implements OnInit {
   birthDays: number[] = [];
   hireDays: number[] = [];
   retireDays: number[] = [];
-
   selectedBirthYear: number | '' = '';
   selectedBirthMonth: number | '' = '';
   selectedBirthDay: number | '' = '';
@@ -109,10 +108,10 @@ export class EditEmployeeModalComponent implements OnInit {
   ngOnInit() {
     this.loadInsuranceRateMasters();
     if (this.selectedEmployee) {
-      this.currentStep = 2; 
+      this.currentStep = 2;
       this.loadExistingEmployee();
     } else {
-      this.currentStep = 1; 
+      this.currentStep = 1;
       this.resetForm();
     }
   }
@@ -161,17 +160,6 @@ export class EditEmployeeModalComponent implements OnInit {
     this.retireDays = days;
     this.selectedRetireDay = correctedDay;
     this.updateFormControlDate('retirementDate', dateString, true);
-  }
-
-  onDepBirthDatePartChange() {
-    const { days, correctedDay, dateString } = resolveDateParts(
-      this.selectedDepBirthYear, this.selectedDepBirthMonth, this.selectedDepBirthDay
-    );
-    this.depBirthDays = days;
-    this.selectedDepBirthDay = correctedDay;
-    if (this.editingDependent) {
-      this.editingDependent.dateOfBirth = dateString;
-    }
   }
 
   /**
@@ -277,6 +265,134 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   /**
+   * 既存の社員情報を読み込む
+   */
+  private async loadExistingEmployee() {
+    if (!this.selectedEmployee || !this.currentUser) return;
+    this.hasLeftStep1 = true;
+    this.isLoadingHistories = true;
+
+    this.form.patchValue({
+      employeeNumber: this.selectedEmployee.employeeNumber,
+      nameKanji: this.selectedEmployee.nameKanji || '',
+      nameKana: this.selectedEmployee.nameKana || '',
+      nameRomaji: this.selectedEmployee.nameRomaji || '',
+      gender: this.selectedEmployee.gender || 'male',
+      employmentType: this.selectedEmployee.employmentType || 'regular',
+      department: this.selectedEmployee.department || '',
+      position: this.selectedEmployee.position || '',
+      employmentInsuranceNumber: this.selectedEmployee.employmentInsuranceNumber || '',
+      dateOfBirth: this.selectedEmployee.dateOfBirth || '',
+      hireDate: this.selectedEmployee.hireDate || '',
+      retirementDate: this.selectedEmployee.retirementDate || '',
+    });
+
+    if (this.selectedEmployee.dateOfBirth) {
+      const [y, m, d] = this.selectedEmployee.dateOfBirth.split('-').map(Number);
+      this.selectedBirthYear = y || '';
+      this.selectedBirthMonth = m || '';
+      this.selectedBirthDay = d || '';
+      this.birthDays = getDaysList(y, m);
+    } else {
+      this.selectedBirthYear = this.selectedBirthMonth = this.selectedBirthDay = '';
+    }
+
+    if (this.selectedEmployee.hireDate) {
+      const [y, m, d] = this.selectedEmployee.hireDate.split('-').map(Number);
+      this.selectedHireYear = y || '';
+      this.selectedHireMonth = m || '';
+      this.selectedHireDay = d || '';
+      this.hireDays = getDaysList(y, m);
+    } else {
+      this.selectedHireYear = this.selectedHireMonth = this.selectedHireDay = '';
+    }
+
+    if (this.selectedEmployee.retirementDate) {
+      const [y, m, d] = this.selectedEmployee.retirementDate.split('-').map(Number);
+      this.selectedRetireYear = y || '';
+      this.selectedRetireMonth = m || '';
+      this.selectedRetireDay = d || '';
+      this.retireDays = getDaysList(y, m);
+    } else {
+      this.selectedRetireYear = this.selectedRetireMonth = this.selectedRetireDay = '';
+    }
+
+    // 前職通算データの復元
+    const empData = this.selectedEmployee as any;
+    this.hasPreviousInsurance = empData?.hasPreviousInsurance ?? false;
+    this.previousInsuranceAmount = empData?.previousInsuranceAmount ?? 0;
+
+    this.employeeAnnualIncome = empData.employeeAnnualIncome || 0;
+    this.dependents = this.selectedEmployee.dependents ? [...this.selectedEmployee.dependents] : [];
+    this.cancelEditDependent();
+
+    const empId = this.selectedEmployee.id;
+    const orgId = this.currentUser.uid;
+
+    try {
+      const [standards, salaries, bonuses] = await Promise.all([
+        this.modalService.loadInsuranceStandards(empId, orgId),
+        this.modalService.loadSalaryStandards(empId, orgId),
+        this.modalService.loadBonusHistories(empId, orgId)
+      ]);
+
+      this.insuranceStandardList = standards.length > 0 ? standards : [
+        this.modalService.generateDefaultInsuranceStandard(
+          this.form.get('hireDate')?.value,
+          this.form.get('retirementDate')?.value,
+          empId,
+          orgId
+        )
+      ];
+
+      this.salaryStandardList = salaries;
+      this.bonusHistoryList = bonuses;
+    } catch (e) {
+      console.error('履歴読み込みエラー:', e);
+    } finally {
+      this.isLoadingHistories = false;
+      this.form.updateValueAndValidity();
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * フォームをリセット
+   */
+  private resetForm() {
+    this.form.reset({
+      employeeNumber: '',
+      nameKanji: '',
+      nameKana: '',
+      nameRomaji: '',
+      gender: 'male',
+      employmentType: 'regular',
+      department: '',
+      position: '',
+      employmentInsuranceNumber: '',
+      dateOfBirth: '',
+      hireDate: '',
+      retirementDate: '',
+    });
+
+    this.selectedBirthYear = this.selectedBirthMonth = this.selectedBirthDay = '';
+    this.selectedHireYear = this.selectedHireMonth = this.selectedHireDay = '';
+    this.selectedRetireYear = this.selectedRetireMonth = this.selectedRetireDay = '';
+
+    this.hasLeftStep1 = false;
+    this.insuranceStandardList = [];
+    this.salaryStandardList = [];
+    this.bonusHistoryList = [];
+    this.hasPreviousInsurance = false;
+    this.previousInsuranceAmount = 0;
+    this.employeeAnnualIncome = 0;
+    this.dependents = [];
+    this.cancelEditDependent();
+    this.form.get('employeeNumber')?.enable();
+    this.cdr.detectChanges();
+  }
+
+  /**
    * Step 1が有効か判定するゲッター
    */
   get isStep1Valid(): boolean {
@@ -296,9 +412,7 @@ export class EditEmployeeModalComponent implements OnInit {
       this.form.hasError('birthDateInFuture') ||
       this.form.hasError('hireDateBeforeBirth') ||
       this.form.hasError('retirementDateBeforeHire') ||
-      this.form.hasError('retirementBeforeHistory') ||
-      this.form.get('dateOfBirth')?.hasError('birthDateInFuture') ||
-      this.form.get('retirementDate')?.hasError('retirementBeforeHistory')
+      this.form.hasError('retirementBeforeHistory') 
     ) {
       return false;
     }
@@ -318,6 +432,17 @@ export class EditEmployeeModalComponent implements OnInit {
     }
   }
 
+  onDepBirthDatePartChange() {
+    const { days, correctedDay, dateString } = resolveDateParts(
+      this.selectedDepBirthYear, this.selectedDepBirthMonth, this.selectedDepBirthDay
+    );
+    this.depBirthDays = days;
+    this.selectedDepBirthDay = correctedDay;
+    if (this.editingDependent) {
+      this.editingDependent.dateOfBirth = dateString;
+    }
+  }
+  
   startAddDependent() {
     this.editingIndex = -1;
     this.editingDependent = {
@@ -460,99 +585,6 @@ export class EditEmployeeModalComponent implements OnInit {
     return getRelationshipLabel(rel);
   }
 
-  /**
-   * 既存の社員情報を読み込む
-   */
-  private async loadExistingEmployee() {
-    if (!this.selectedEmployee || !this.currentUser) return;
-    this.hasLeftStep1 = true;
-    this.isLoadingHistories = true;
-
-    this.form.patchValue({
-      employeeNumber: this.selectedEmployee.employeeNumber,
-      nameKanji: this.selectedEmployee.nameKanji || '',
-      nameKana: this.selectedEmployee.nameKana || '',
-      nameRomaji: this.selectedEmployee.nameRomaji || '',
-      gender: this.selectedEmployee.gender || 'male',
-      employmentType: this.selectedEmployee.employmentType || 'regular',
-      department: this.selectedEmployee.department || '',
-      position: this.selectedEmployee.position || '',
-      employmentInsuranceNumber: this.selectedEmployee.employmentInsuranceNumber || '',
-      dateOfBirth: this.selectedEmployee.dateOfBirth || '',
-      hireDate: this.selectedEmployee.hireDate || '',
-      retirementDate: this.selectedEmployee.retirementDate || '',
-    });
-
-    if (this.selectedEmployee.dateOfBirth) {
-      const [y, m, d] = this.selectedEmployee.dateOfBirth.split('-').map(Number);
-      this.selectedBirthYear = y || '';
-      this.selectedBirthMonth = m || '';
-      this.selectedBirthDay = d || '';
-      this.birthDays = getDaysList(y, m);
-    } else {
-      this.selectedBirthYear = this.selectedBirthMonth = this.selectedBirthDay = '';
-    }
-
-    if (this.selectedEmployee.hireDate) {
-      const [y, m, d] = this.selectedEmployee.hireDate.split('-').map(Number);
-      this.selectedHireYear = y || '';
-      this.selectedHireMonth = m || '';
-      this.selectedHireDay = d || '';
-      this.hireDays = getDaysList(y, m);
-    } else {
-      this.selectedHireYear = this.selectedHireMonth = this.selectedHireDay = '';
-    }
-
-    if (this.selectedEmployee.retirementDate) {
-      const [y, m, d] = this.selectedEmployee.retirementDate.split('-').map(Number);
-      this.selectedRetireYear = y || '';
-      this.selectedRetireMonth = m || '';
-      this.selectedRetireDay = d || '';
-      this.retireDays = getDaysList(y, m);
-    } else {
-      this.selectedRetireYear = this.selectedRetireMonth = this.selectedRetireDay = '';
-    }
-
-
-    // 前職通算データの復元
-    const empData = this.selectedEmployee as any;
-    this.hasPreviousInsurance = empData?.hasPreviousInsurance ?? false;
-    this.previousInsuranceAmount = empData?.previousInsuranceAmount ?? 0;
-
-    this.employeeAnnualIncome = empData.employeeAnnualIncome || 0;
-    this.dependents = this.selectedEmployee.dependents ? [...this.selectedEmployee.dependents] : [];
-    this.cancelEditDependent();
-
-    const empId = this.selectedEmployee.id;
-    const orgId = this.currentUser.uid;
-
-    try {
-      const [standards, salaries, bonuses] = await Promise.all([
-        this.modalService.loadInsuranceStandards(empId, orgId),
-        this.modalService.loadSalaryStandards(empId, orgId),
-        this.modalService.loadBonusHistories(empId, orgId)
-      ]);
-
-      this.insuranceStandardList = standards.length > 0 ? standards : [
-        this.modalService.generateDefaultInsuranceStandard(
-          this.form.get('hireDate')?.value,
-          this.form.get('retirementDate')?.value,
-          empId,
-          orgId
-        )
-      ];
-
-      this.salaryStandardList = salaries;
-      this.bonusHistoryList = bonuses;
-    } catch (e) {
-      console.error('履歴読み込みエラー:', e);
-    } finally {
-      this.isLoadingHistories = false; 
-      this.form.updateValueAndValidity();
-      this.cdr.detectChanges();
-    }
-  }
-
   private async loadInsuranceRateMasters() {
     if (!this.currentUser) return;
     try {
@@ -611,7 +643,6 @@ export class EditEmployeeModalComponent implements OnInit {
     });
   }
 
-
   /**
    * 新規社員登録時、報酬月額のデフォルトレコードを自動生成
    * 期間：入社年月 〜 入社年8月（入社月が6月以降なら翌年8月）
@@ -630,42 +661,6 @@ export class EditEmployeeModalComponent implements OnInit {
         this.currentUser.uid
       )
     ];
-  }
-
-  /**
-   * フォームをリセット
-   */
-  private resetForm() {
-    this.form.reset({
-      employeeNumber: '',
-      nameKanji: '',
-      nameKana: '',
-      nameRomaji: '',
-      gender: 'male',
-      employmentType: 'regular',
-      department: '',
-      position: '',
-      employmentInsuranceNumber: '',
-      dateOfBirth: '',
-      hireDate: '',
-      retirementDate: '',
-    });
-
-    this.selectedBirthYear = this.selectedBirthMonth = this.selectedBirthDay = '';
-    this.selectedHireYear = this.selectedHireMonth = this.selectedHireDay = '';
-    this.selectedRetireYear = this.selectedRetireMonth = this.selectedRetireDay = '';
-
-    this.hasLeftStep1 = false;
-    this.insuranceStandardList = [];
-    this.salaryStandardList = [];
-    this.bonusHistoryList = [];
-    this.hasPreviousInsurance = false;
-    this.previousInsuranceAmount = 0;
-    this.employeeAnnualIncome = 0;
-    this.dependents = [];
-    this.cancelEditDependent();
-    this.form.get('employeeNumber')?.enable();
-    this.cdr.detectChanges();
   }
 
   goToPreviousStep() {
@@ -702,7 +697,7 @@ export class EditEmployeeModalComponent implements OnInit {
       alert('履歴データを読み込み中です。完了するまでお待ちください。');
       return;
     }
-    
+
     if (!this.isStep1Valid) {
       Object.keys(this.form.controls).forEach(key => this.form.get(key)?.markAsTouched());
       alert('基本情報に入力エラーがあります。確認してください。');

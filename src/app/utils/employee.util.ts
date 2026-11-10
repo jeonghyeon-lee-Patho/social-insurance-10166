@@ -126,14 +126,19 @@ export function checkDependentEligibility(
     return { isHealthEligible: false, isPension3Eligible: false };
   }
 
+  if (dep.relationship === 'other' && !dep.isLivingTogether) {
+    return { isHealthEligible: false, isPension3Eligible: false };
+  }
+
   const incomeLimit = (age >= 60 || dep.isDisability) ? 1800000 : 1300000;
   const depIncome = Number(dep.expectedAnnualIncome) || 0;
   let isHealthEligible = depIncome < incomeLimit;
 
   if (isHealthEligible) {
+    const empIncome = Number(employeeAnnualIncome) || 0;
+
     if (dep.isLivingTogether) {
-      const empIncome = Number(employeeAnnualIncome) || 0;
-      if (empIncome > 0 && (depIncome * 2 >= empIncome)) {
+      if (depIncome * 2 >= empIncome) {
         isHealthEligible = false;
       }
     } else {
@@ -145,7 +150,7 @@ export function checkDependentEligibility(
   }
 
   const isPension3Eligible = dep.relationship === 'spouse' && isHealthEligible && age >= 20 && age < 60;
-
+  
   return { isHealthEligible, isPension3Eligible };
 }
 
@@ -342,6 +347,18 @@ export function romajiValidator(control: AbstractControl): ValidationErrors | nu
   return regex.test(control.value) ? null : { invalidRomaji: true };
 }
 
+/**
+ * 雇用保険被保険者番号バリデータ (任意入力、入力時のみ4桁-6桁-1桁または11桁数値を検証)
+ * 例: 1234-567890-1 または 12345678901
+ */
+export function employmentInsuranceValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value?.trim();
+  if (!value) return null;
+
+  const regex = /^(\d{4}-\d{6}-\d{1}|\d{11})$/;
+  return regex.test(value) ? null : { invalidEmploymentInsurance: true };
+}
+
 export function setControlSpecificError(control: AbstractControl | null, errorKey: string, hasError: boolean) {
   if (!control) return;
   const currentErrors = control.errors ? { ...control.errors } : null;
@@ -376,14 +393,3 @@ export function resolveDateParts(
   return { days, correctedDay, dateString };
 }
 
-/**
- * 雇用保険被保険者番号バリデータ (任意入力、入力時のみ4桁-6桁-1桁または11桁数値を検証)
- * 例: 1234-567890-1 または 12345678901
- */
-export function employmentInsuranceValidator(control: AbstractControl): ValidationErrors | null {
-  const value = control.value?.trim();
-  if (!value) return null;
-
-  const regex = /^(\d{4}-\d{6}-\d{1}|\d{11})$/;
-  return regex.test(value) ? null : { invalidEmploymentInsurance: true };
-}
