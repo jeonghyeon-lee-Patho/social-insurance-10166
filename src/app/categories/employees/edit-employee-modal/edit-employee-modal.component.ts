@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { User } from '@angular/fire/auth';
@@ -20,8 +20,7 @@ import { employmentInsuranceValidator } from '../../../utils/employee.util';
   templateUrl: './edit-employee-modal.component.html',
   styleUrl: './edit-employee-modal.component.css'
 })
-export class EditEmployeeModalComponent implements OnChanges {
-  @Input() isOpen = false;
+export class EditEmployeeModalComponent implements OnInit {
   @Input() selectedEmployee: EmployeeView | null = null;
   @Input() currentUser: User | null = null;
   @Output() onClose = new EventEmitter<void>();
@@ -107,20 +106,14 @@ export class EditEmployeeModalComponent implements OnChanges {
     }, { validators: this.dateOrderValidator() });
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (this.isOpen) {
-      this.loadInsuranceRateMasters();
-      if (changes['isOpen']?.currentValue || changes['selectedEmployee']) {
-        if (this.selectedEmployee) {
-          // 編集時はStep 2へ直行
-          this.currentStep = 2;
-          this.loadExistingEmployee();
-        } else {
-          // 新規追加時はStep 1から開始
-          this.currentStep = 1;
-          this.resetForm();
-        }
-      }
+  ngOnInit() {
+    this.loadInsuranceRateMasters();
+    if (this.selectedEmployee) {
+      this.currentStep = 2; 
+      this.loadExistingEmployee();
+    } else {
+      this.currentStep = 1; 
+      this.resetForm();
     }
   }
 
@@ -711,6 +704,7 @@ export class EditEmployeeModalComponent implements OnChanges {
     }
     
     if (!this.isStep1Valid) {
+      Object.keys(this.form.controls).forEach(key => this.form.get(key)?.markAsTouched());
       alert('基本情報に入力エラーがあります。確認してください。');
       this.currentStep = 1;
       this.cdr.detectChanges();
@@ -761,7 +755,7 @@ export class EditEmployeeModalComponent implements OnChanges {
         formValue,
         hasMissingHistory,
         hasIneligibleDependent,
-        employeeAnnualIncome: this.employeeAnnualIncome,
+        employeeAnnualIncome: Number(this.employeeAnnualIncome) || 0,
         dependents: this.dependents,
         hasPreviousInsurance: this.hasPreviousInsurance,
         previousInsuranceAmount: this.previousInsuranceAmount,
@@ -771,7 +765,7 @@ export class EditEmployeeModalComponent implements OnChanges {
       });
 
       this.onSave.emit(savedEmployee);
-      this.close();
+      this.onClose.emit();
     } catch (error) {
       console.error('社員情報の保存に失敗しました:', error);
       alert('保存に失敗しました。');
@@ -781,15 +775,10 @@ export class EditEmployeeModalComponent implements OnChanges {
     }
   }
 
-  /* モーダルを閉じる */
-  close() {
-    this.onClose.emit();
-  }
-
   /* キャンセル */
   cancel() {
     if (confirm('編集内容を破棄してもよろしいですか？')) {
-      this.close();
+      this.onClose.emit();
     }
   }
 

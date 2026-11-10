@@ -3,7 +3,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, OnDestroy } from "@angula
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { EditEmployeeModalComponent } from "./edit-employee-modal/edit-employee-modal.component";
 import { Auth, authState, User } from '@angular/fire/auth';
-import { Firestore, collection, query, where, getDocs, doc, deleteDoc, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, query, where, getDocs, doc, writeBatch } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import { Employee, EmployeeView } from '../../models/employee.model';
 import {
@@ -11,7 +11,6 @@ import {
   filterByStatus,
   filterBySearch,
   formatDate,
-  checkSalaryHistoryGaps,
 } from '../../utils/employee.util';
 
 export type SortKey = 'employeeNumber' | 'name' | 'age' | 'hireDate';
@@ -110,23 +109,42 @@ export class EmployeesComponent implements OnInit, OnDestroy {
    */
   private sortEmployeeList(list: any[], key: SortKey, direction: SortDirection): any[] {
     const factor = direction === 'asc' ? 1 : -1;
-  
+
+    const tieBreaker = (a: any, b: any) => {
+      return (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true });
+    };
+
     return [...list].sort((a, b) => {
+      let diff = 0;
+
       switch (key) {
         case 'employeeNumber':
-          return (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true }) * factor;
+          diff = (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true });
+          break;
         case 'name':
-          return (a.nameKana ?? '').localeCompare(b.nameKana ?? '', 'ja') * factor;
+          diff = (a.nameKana ?? '').localeCompare(b.nameKana ?? '', 'ja');
+          break;
         case 'age': {
-          const ageDiff = (a.age ?? 0) - (b.age ?? 0);
-          if (ageDiff !== 0) return ageDiff * factor;
-          return (new Date(a.dateOfBirth).getTime() - new Date(b.dateOfBirth).getTime()) * factor;
+          const timeA = a.dateOfBirth ? new Date(a.dateOfBirth).getTime() : 0;
+          const timeB = b.dateOfBirth ? new Date(b.dateOfBirth).getTime() : 0;
+          diff = timeB - timeA;
+          break;
         }
-        case 'hireDate':
-          return (new Date(a.hireDate).getTime() - new Date(b.hireDate).getTime()) * factor;
+        case 'hireDate': {
+          const timeA = a.hireDate ? new Date(a.hireDate).getTime() : 0;
+          const timeB = b.hireDate ? new Date(b.hireDate).getTime() : 0;
+          diff = timeA - timeB;
+          break;
+        }
         default:
-          return 0;
+          diff = 0;
       }
+
+      if (diff !== 0) {
+        return diff * factor;
+      }
+
+      return tieBreaker(a, b);
     });
   }
 

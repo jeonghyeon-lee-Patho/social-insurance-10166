@@ -133,7 +133,7 @@ export class RatesComponent implements OnInit, OnDestroy {
           employer: 50
         },
         applicableEmployeeCount: 0,
-        
+
         createdAt: now,
         updatedAt: now,
         createdBy: this.currentUser.uid,
@@ -210,28 +210,6 @@ export class RatesComponent implements OnInit, OnDestroy {
       console.error('保険基準の削除に失敗しました:', error);
       alert('削除に失敗しました。');
     }
-  }
-
-  /**
-   * 保険基準の削除が可能かどうかを判定
-   */
-  isDeleteDisabled(rate: InsuranceRateMaster): boolean {
-    // 適用人数がゼロではない場合は削除不可
-    if (rate.applicableEmployeeCount > 0) {
-      return true;
-    }
-    // 登録基準が唯一の場合は削除不可
-    if (this.insuranceRates.length === 1) {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * 保険種類の表示名を取得
-   */
-  getInsuranceTypeLabel(type: InsuranceType): string {
-    return type === InsuranceType.KYOKAI ? '協会けんぽ' : '組合健保';
   }
 
   /**

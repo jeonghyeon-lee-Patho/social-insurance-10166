@@ -81,11 +81,6 @@ function hiraganaToKatakana(str: string): string {
   return str.replace(/[\u3041-\u3096]/g, char => String.fromCharCode(char.charCodeAt(0) + 0x60));
 }
 
-/* 検索テキストを正規化（ひらがなをカタカナに統一）*/
-function normalizeSearchText(text: string): string {
-  return hiraganaToKatakana(text.toLowerCase().replace(/[\s\u3000]+/g, ''));
-}
-
 /* 検索対象テキストを正規化*/
 function normalizeSearchTarget(text: string): string {
   return hiraganaToKatakana(text.toLowerCase().replace(/[\s\u3000]+/g, ''));
@@ -231,7 +226,7 @@ export function filterByStatus(
 export function filterBySearch(employees: EmployeeView[], searchText: string): EmployeeView[] {
   if (!searchText.trim()) return employees;
 
-  const normalizedSearchText = normalizeSearchText(searchText);
+  const normalizedSearchText = normalizeSearchTarget(searchText);
 
   return employees.filter(e => {
     const searchTargets = [

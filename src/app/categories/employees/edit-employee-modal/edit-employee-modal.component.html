@@ -1,5 +1,5 @@
-<div class="modal-overlay" *ngIf="isOpen">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+<div class="modal-overlay">
+  <div class="modal-content">
     <!-- モーダルヘッダー -->
     <div class="modal-header">
       <h2 class="modal-title">社員情報 登録・編集</h2>
@@ -9,13 +9,13 @@
     <!-- ステップインジケータ -->
     <div class="step-indicator">
       <div class="step-bar">
-        <div class="step" [ngClass]="{ active: currentStep === 1 }">
-          <span class="step-number" [ngClass]="{ completed: currentStep > 1 }">1</span>
+        <div class="step" [class.active]="currentStep === 1">
+          <span class="step-number" [class.completed]="currentStep > 1">1</span>
           <span class="step-label">基本情報{{ currentStep === 1 ? '（選択中）' : '' }}</span>
         </div>
         <div class="step-divider"></div>
-        <div class="step" [ngClass]="{ active: currentStep === 2 }">
-          <span class="step-number" [ngClass]="{ completed: currentStep > 2 }">2</span>
+        <div class="step" [class.active]="currentStep === 2">
+          <span class="step-number">2</span>
           <span class="step-label">保険・報酬・賞与履歴{{ currentStep === 2 ? '（選択中）' : '' }}</span>
         </div>
       </div>

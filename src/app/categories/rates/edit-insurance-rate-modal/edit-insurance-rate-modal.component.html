@@ -1,9 +1,9 @@
 <!-- モーダルバックドロップ -->
-<div *ngIf="isOpen" class="modal-backdrop" (click)="closeModal()"></div>
+<div *ngIf="isOpen" class="modal-backdrop"></div>
 
 <!-- モーダルコンテナ -->
 <div *ngIf="isOpen" class="modal-overlay">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+  <div class="modal-content">
     <!-- モーダルヘッダー -->
     <div class="modal-header">
       <h2>保険基準の設定</h2>
@@ -150,10 +150,10 @@
             <label for="employeePercentage" class="label">従業員割合 :</label>
             <div class="input-wrapper">
               <input id="employeePercentage" type="number" class="form-input-number"
-                formControlName="employeePercentage" step="0.1" min="0" max="50" placeholder="50.0"
-                (input)="onNumberInput('employeePercentage', $event, 1)">
+                formControlName="employeePercentage" step="0.01" min="0" max="50" placeholder="50.0"
+                (input)="onNumberInput('employeePercentage', $event, 2)">
               <span class="unit">%</span>
-              <span class="note">(0.0 - 50.0)</span>
+              <span class="note">(0.00 - 50.00)</span>
             </div>
           </div>
 
@@ -176,10 +176,10 @@
             <label for="careEmployeePercentage" class="label">従業員割合 :</label>
             <div class="input-wrapper">
               <input id="careEmployeePercentage" type="number" class="form-input-number"
-                formControlName="careEmployeePercentage" step="0.1" min="0" max="50" placeholder="50.0"
-                (input)="onNumberInput('careEmployeePercentage', $event, 1)">
+                formControlName="careEmployeePercentage" step="0.01" min="0" max="50" placeholder="50.0"
+                (input)="onNumberInput('careEmployeePercentage', $event, 2)">
               <span class="unit">%</span>
-              <span class="note">(0.0 - 50.0)</span>
+              <span class="note">(0.00 - 50.00)</span>
             </div>
           </div>
 

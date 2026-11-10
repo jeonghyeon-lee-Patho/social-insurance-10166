@@ -1,5 +1,5 @@
 <div class="employee-container">
-  <app-edit-employee-modal *ngIf="showEditModal" [isOpen]="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
+  <app-edit-employee-modal *ngIf="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
     (onClose)="closeEditModal()" (onSave)="onEmployeeSaved($event)"></app-edit-employee-modal>
 
   <div class="content-wrapper">

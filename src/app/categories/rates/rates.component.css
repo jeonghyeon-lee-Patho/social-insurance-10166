@@ -204,16 +204,10 @@
   border-color: #fca5a5;
 }
 
-.btn-delete:hover:not(:disabled) {
+.btn-delete:hover {
   background-color: #fee2e2;
 }
 
-.btn-delete:disabled {
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  border-color: #e2e8f0;
-  cursor: not-allowed;
-}
 
 /* 末尾に常時表示される「追加カード」 */
 .rate-card.add-rate-card {

@@ -579,6 +579,7 @@ export function calculateAnnualPremiums(
     const stdPensionSalary = Math.max(88000, Math.min(stdHealthSalary, 650000));
 
     const rates = resolveRatesAndExemptions(emp, attrYM, attrYear, attrMonth, insMap, insuranceRateMastersMap);
+    salaryMonthsCount++;
     if (rates.isExemptStandard) continue;
 
     let mHEmp = 0, mHComp = 0, mHTot = 0;
@@ -612,7 +613,6 @@ export function calculateAnnualPremiums(
     salHEmp += mHEmp; salHComp += mHComp; salHTot += mHTot;
     salCEmp += mCEmp; salCComp += mCComp; salCTot += mCTot;
     salPEmp += mPEmp; salPComp += mPComp; salPTot += mPTot;
-    salaryMonthsCount++;
   }
 
   const salEmpTotal = salHEmp + salCEmp + salPEmp;
@@ -630,6 +630,7 @@ export function calculateAnnualPremiums(
   });
 
   for (const b of annualBonuses) {
+    bonusCount++;
     const pY = Number(b.paymentYear);
     const pM = Number(b.paymentMonth);
     const rates = resolveRatesAndExemptions(emp, pY * 100 + pM, pY, pM, insMap, insuranceRateMastersMap);
@@ -650,7 +651,6 @@ export function calculateAnnualPremiums(
       const res = calculateInsuranceItem(stdPensionBonus, rates.pensionRate, 50);
       bPEmp += res.employeeShare; bPComp += res.employerShare; bPTot += res.totalAmount;
     }
-    bonusCount++;
   }
 
   const bonusEmpTotal = bHEmp + bCEmp + bPEmp;
@@ -719,7 +719,7 @@ export function resolveAlertMetadata(
   if (isSameMonth && targetYM === collStartYM) {
     notices.push('案内: 同月得喪（入社当月退職）に伴い、当月分保険料（1ヶ月分）を控除します。');
   } else if (basis === 'nextMonth' && isRetiredThisMonth && isEndOfMonthRetirement) {
-    notices.push('案内: 月末退職に伴う当月分＋前月分の2ヶ月分一括徴収対象です。');
+    notices.push('案内: 月末退職に伴う当月分＋前月分の2ヶ月分一括徴収対象です。（給与のみ適用）');
   } else if (isRetiredThisMonth) {
     notices.push('案内: 当月退職に伴う最終徴収月です。');
   }

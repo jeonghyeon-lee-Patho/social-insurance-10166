@@ -35,7 +35,7 @@
             <span class="label">* 健康保険:</span>
             <span class="value">{{ rate.rates.healthInsurance | number:'1.2-2' }}%</span>
             <span class="ratio-badge">
-              {{ rate.burdenRatio.employee | number:'1.1-1' }} : {{ rate.burdenRatio.employer | number:'1.1-1' }}
+              {{ rate.burdenRatio.employee | number:'1.1-2' }} : {{ rate.burdenRatio.employer | number:'1.1-2' }}
             </span>
           </div>
 
@@ -44,8 +44,8 @@
             <span class="label">* 介護保険:</span>
             <span class="value">{{ rate.rates.careInsurance | number:'1.2-2' }}%</span>
             <span class="ratio-badge">
-              {{ (rate.burdenRatioCare ? rate.burdenRatioCare.employee : 50) | number:'1.1-1' }} : {{
-              (rate.burdenRatioCare ? rate.burdenRatioCare.employer : 50) | number:'1.1-1' }} </span>
+              {{ (rate.burdenRatioCare ? rate.burdenRatioCare.employee : 50) | number:'1.1-2' }} : {{
+              (rate.burdenRatioCare ? rate.burdenRatioCare.employer : 50) | number:'1.1-2' }} </span>
           </div>
 
           <!-- 厚生年金 (法定固定) -->
@@ -65,7 +65,7 @@
 
           <div class="actions">
             <button class="btn-edit" (click)="openEditModal(rate)">編集</button>
-            <button class="btn-delete" (click)="deleteRate(rate)" [disabled]="isDeleteDisabled(rate)">削除</button>
+            <button class="btn-delete" (click)="deleteRate(rate)">削除</button>
           </div>
         </div>
       </div>

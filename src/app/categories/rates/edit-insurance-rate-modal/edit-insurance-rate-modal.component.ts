@@ -10,7 +10,6 @@ import {
   REGION_PREFECTURE_MAP,
   getKyokaiRateByPrefecture,
   REGION_DISPLAY_MAP,
-  getRegionByPrefecture
 } from '../../../data/insurance-rates.data';
 
 @Component({
@@ -24,9 +23,9 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
   @Input() isOpen = false;
   @Input() selectedRate: InsuranceRateMaster | null = null;
   @Input() currentUser: User | null = null;
+  @Input() existingRates: InsuranceRateMaster[] = [];
   @Output() onClose = new EventEmitter<void>();
   @Output() onSave = new EventEmitter<void>();
-  @Input() existingRates: InsuranceRateMaster[] = [];
 
   form: FormGroup;
   isSaving = false;
@@ -52,11 +51,11 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       pensionInsuranceRate: [{ value: INSURANCE_CONSTANTS.pensionInsuranceRate, disabled: true }],
 
       // 健康保険の労使割合
-      employeePercentage: [50, [Validators.required, Validators.min(0), Validators.max(50), Validators.pattern(/^\d+(\.\d)?$/)]],
+      employeePercentage: [50, [Validators.required, Validators.min(0), Validators.max(50), Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
       employerPercentage: [{ value: 50, disabled: true }],
 
-      // 介護保険の労使割合（組合健保のみ手動、デフォルト50）
-      careEmployeePercentage: [{ value: 50, disabled: true }, [Validators.required, Validators.min(0), Validators.max(50), Validators.pattern(/^\d+(\.\d)?$/)]],
+      // 介護保険の労使割合
+      careEmployeePercentage: [50, [Validators.required, Validators.min(0), Validators.max(50), Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
       careEmployerPercentage: [{ value: 50, disabled: true }]
     });
 
@@ -105,7 +104,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     // 健康保険割合連動
     this.form.get('employeePercentage')?.valueChanges.subscribe(value => {
       const numericVal = Number(value) || 0;
-      const employerPercentage = Math.round((100 - numericVal) * 10) / 10;
+      const employerPercentage = Math.round((100 - numericVal) * 100) / 100;
       this.form.patchValue({ employerPercentage }, { emitEvent: false });
       this.cdr.detectChanges();
     });
@@ -113,7 +112,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     // 介護保険割合連動
     this.form.get('careEmployeePercentage')?.valueChanges.subscribe(value => {
       const numericVal = Number(value) || 0;
-      const careEmployerPercentage = Math.round((100 - numericVal) * 10) / 10;
+      const careEmployerPercentage = Math.round((100 - numericVal) * 100) / 100;
       this.form.patchValue({ careEmployerPercentage }, { emitEvent: false });
       this.cdr.detectChanges();
     });
@@ -123,9 +122,6 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     if (!this.selectedRate) return;
 
     let targetRegion = this.selectedRate.region;
-    if (!targetRegion && this.selectedRate.prefecture) {
-      targetRegion = getRegionByPrefecture(this.selectedRate.prefecture) || undefined;
-    }
 
     if (targetRegion) {
       this.prefectures = REGION_PREFECTURE_MAP[targetRegion] || [];
@@ -183,7 +179,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       this.form.get('healthInsuranceRate')?.disable();
       this.form.get('careInsuranceRate')?.disable();
       this.form.get('employeePercentage')?.disable();
-      this.form.get('careEmployeePercentage')?.disable(); // 協会けんぽは固定
+      this.form.get('careEmployeePercentage')?.disable(); 
 
       if (resetDefaults) {
         this.form.get('prefecture')?.disable();
@@ -203,7 +199,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       this.form.get('healthInsuranceRate')?.enable();
       this.form.get('careInsuranceRate')?.enable();
       this.form.get('employeePercentage')?.enable();
-      this.form.get('careEmployeePercentage')?.enable(); // 組合健保は手動入力可能
+      this.form.get('careEmployeePercentage')?.enable();
 
       if (resetDefaults) {
         this.form.patchValue({
@@ -291,7 +287,6 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
 
     this.isSaving = true;
     try {
-
       const docData: Record<string, any> = {
         name: inputName,
         type: formValue.type,

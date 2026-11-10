@@ -6,7 +6,6 @@ import { SalaryStandardView } from '../../../models/salary-standard.model';
 import { BonusHistoryView } from '../../../models/bonus-history.model';
 import { InsuranceRateMaster } from '../../../models/insurance-rate.model';
 import { calculateInsuranceEndYearMonth } from '../../../utils/insurance-calculator.util';
-import { determineSalaryGrade } from '../../../data/salary-grade-master.data';
 import { toEmployeeView } from '../../../utils/employee.util';
 
 export interface SaveEmployeePayload {
