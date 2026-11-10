@@ -67,6 +67,11 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    if (changes['isOpen'] && !this.isOpen) {
+      this.resetForm();
+      return;
+    }
+
     if (this.isOpen) {
       if (changes['isOpen']?.currentValue || changes['selectedRate']) {
         if (this.selectedRate) {
@@ -118,20 +123,40 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     });
   }
 
+  private findRegionByPrefecture(prefecture: string): InsuranceRegion | null {
+    if (!prefecture) return null;
+    const entries = Object.entries(REGION_PREFECTURE_MAP) as [InsuranceRegion, string[]][];
+    const found = entries.find(([_, prefs]) => prefs.includes(prefecture));
+    return found ? found[0] : null;
+  }
+
   private loadExistingRate() {
     if (!this.selectedRate) return;
 
-    let targetRegion = this.selectedRate.region;
+    const isKyokai = this.selectedRate.type === InsuranceType.KYOKAI;
+    this.onInsuranceTypeChange(this.selectedRate.type, false);
 
-    if (targetRegion) {
-      this.prefectures = REGION_PREFECTURE_MAP[targetRegion] || [];
-      this.form.get('prefecture')?.enable({ emitEvent: false });
+    let targetRegion = this.selectedRate.region || '';
+    const targetPrefecture = this.selectedRate.prefecture || '';
+
+    if (isKyokai) {
+      if (!targetRegion && targetPrefecture) {
+        targetRegion = this.findRegionByPrefecture(targetPrefecture) || '';
+      }
+
+      if (targetRegion && REGION_PREFECTURE_MAP[targetRegion as InsuranceRegion]) {
+        this.prefectures = [...REGION_PREFECTURE_MAP[targetRegion as InsuranceRegion]];
+        this.form.get('prefecture')?.enable({ emitEvent: false });
+      } else {
+        this.prefectures = [];
+        this.form.get('prefecture')?.disable({ emitEvent: false });
+      }
     } else {
       this.prefectures = [];
       this.form.get('prefecture')?.disable({ emitEvent: false });
     }
 
-    this.onInsuranceTypeChange(this.selectedRate.type, false);
+    this.cdr.detectChanges();
 
     // 新たにモデルに追加されるであろう burdenRatioCare の考慮 (互換性確保)
     const careEmpRatio = (this.selectedRate as any).burdenRatioCare?.employee ?? 50;
@@ -140,8 +165,8 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     this.form.patchValue({
       name: this.selectedRate.name,
       type: this.selectedRate.type,
-      region: targetRegion || '',
-      prefecture: this.selectedRate.prefecture || '',
+      region: targetRegion,
+      prefecture: targetPrefecture,
       healthInsuranceRate: this.selectedRate.rates.healthInsurance,
       careInsuranceRate: this.selectedRate.rates.careInsurance,
       pensionInsuranceRate: this.selectedRate.rates.pensionInsurance,
@@ -168,22 +193,26 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       employerPercentage: 50,
       careEmployeePercentage: 50,
       careEmployerPercentage: 50
-    });
+    }, { emitEvent: false });
 
-    this.onInsuranceTypeChange(InsuranceType.KYOKAI);
+    this.onInsuranceTypeChange(InsuranceType.KYOKAI, true);
+    this.cdr.detectChanges();
   }
 
   private onInsuranceTypeChange(type: InsuranceType, resetDefaults = true) {
     if (type === InsuranceType.KYOKAI) {
-      this.form.get('region')?.enable();
-      this.form.get('healthInsuranceRate')?.disable();
-      this.form.get('careInsuranceRate')?.disable();
-      this.form.get('employeePercentage')?.disable();
-      this.form.get('careEmployeePercentage')?.disable(); 
+      this.form.get('region')?.enable({ emitEvent: false });
+      this.form.get('healthInsuranceRate')?.disable({ emitEvent: false });
+      this.form.get('careInsuranceRate')?.disable({ emitEvent: false });
+      this.form.get('employeePercentage')?.disable({ emitEvent: false });
+      this.form.get('careEmployeePercentage')?.disable({ emitEvent: false });
 
       if (resetDefaults) {
-        this.form.get('prefecture')?.disable();
+        this.prefectures = [];
+        this.form.get('prefecture')?.disable({ emitEvent: false });
         this.form.patchValue({
+          region: '',
+          prefecture: '',
           healthInsuranceRate: 0,
           careInsuranceRate: KYOKAI_CONSTANTS.careInsuranceRate,
           pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
@@ -194,14 +223,15 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
         }, { emitEvent: false });
       }
     } else {
-      this.form.get('region')?.disable();
-      this.form.get('prefecture')?.disable();
-      this.form.get('healthInsuranceRate')?.enable();
-      this.form.get('careInsuranceRate')?.enable();
-      this.form.get('employeePercentage')?.enable();
-      this.form.get('careEmployeePercentage')?.enable();
+      this.form.get('region')?.disable({ emitEvent: false });
+      this.form.get('prefecture')?.disable({ emitEvent: false });
+      this.form.get('healthInsuranceRate')?.enable({ emitEvent: false });
+      this.form.get('careInsuranceRate')?.enable({ emitEvent: false });
+      this.form.get('employeePercentage')?.enable({ emitEvent: false });
+      this.form.get('careEmployeePercentage')?.enable({ emitEvent: false });
 
       if (resetDefaults) {
+        this.prefectures = [];
         this.form.patchValue({
           region: '',
           prefecture: '',
@@ -213,14 +243,13 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
           careEmployeePercentage: 50,
           careEmployerPercentage: 50
         }, { emitEvent: false });
-        this.prefectures = [];
       }
     }
   }
 
   private onRegionChange(region: InsuranceRegion | '') {
-    if (region) {
-      this.prefectures = REGION_PREFECTURE_MAP[region] || [];
+    if (region && REGION_PREFECTURE_MAP[region]) {
+      this.prefectures = [...REGION_PREFECTURE_MAP[region]];
       this.form.get('prefecture')?.enable();
     } else {
       this.prefectures = [];
@@ -311,7 +340,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       if (formValue.type === InsuranceType.KYOKAI) {
         docData['region'] = formValue.region;
         docData['prefecture'] = formValue.prefecture;
-      } 
+      }
 
       if (this.selectedRate) {
         if (formValue.type !== InsuranceType.KYOKAI) {
