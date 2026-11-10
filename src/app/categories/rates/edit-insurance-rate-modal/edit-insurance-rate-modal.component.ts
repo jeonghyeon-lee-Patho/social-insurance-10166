@@ -40,6 +40,30 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
 
+  private readonly defaultKyokaiValues = {
+    region: '',
+    prefecture: '',
+    healthInsuranceRate: 0,
+    careInsuranceRate: KYOKAI_CONSTANTS.careInsuranceRate,
+    pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
+    employeePercentage: 50,
+    employerPercentage: 50,
+    careEmployeePercentage: 50,
+    careEmployerPercentage: 50
+  };
+
+  private readonly defaultKumiaiValues = {
+    region: '',
+    prefecture: '',
+    healthInsuranceRate: '',
+    careInsuranceRate: '',
+    pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
+    employeePercentage: 50,
+    employerPercentage: 50,
+    careEmployeePercentage: 50,
+    careEmployerPercentage: 50
+  };
+
   constructor() {
     this.form = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(20)]],
@@ -184,18 +208,11 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     this.form.reset({
       name: '',
       type: InsuranceType.KYOKAI,
-      region: '',
-      prefecture: '',
-      healthInsuranceRate: 0,
-      careInsuranceRate: KYOKAI_CONSTANTS.careInsuranceRate,
-      pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
-      employeePercentage: 50,
-      employerPercentage: 50,
-      careEmployeePercentage: 50,
-      careEmployerPercentage: 50
+      ...this.defaultKyokaiValues
     }, { emitEvent: false });
 
-    this.onInsuranceTypeChange(InsuranceType.KYOKAI, true);
+    this.onInsuranceTypeChange(InsuranceType.KYOKAI, false);
+    this.form.get('prefecture')?.disable({ emitEvent: false });
     this.cdr.detectChanges();
   }
 
@@ -210,17 +227,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       if (resetDefaults) {
         this.prefectures = [];
         this.form.get('prefecture')?.disable({ emitEvent: false });
-        this.form.patchValue({
-          region: '',
-          prefecture: '',
-          healthInsuranceRate: 0,
-          careInsuranceRate: KYOKAI_CONSTANTS.careInsuranceRate,
-          pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
-          employeePercentage: 50,
-          employerPercentage: 50,
-          careEmployeePercentage: 50,
-          careEmployerPercentage: 50
-        }, { emitEvent: false });
+        this.form.patchValue(this.defaultKyokaiValues, { emitEvent: false });
       }
     } else {
       this.form.get('region')?.disable({ emitEvent: false });
@@ -232,17 +239,7 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
 
       if (resetDefaults) {
         this.prefectures = [];
-        this.form.patchValue({
-          region: '',
-          prefecture: '',
-          healthInsuranceRate: '',
-          careInsuranceRate: '',
-          pensionInsuranceRate: INSURANCE_CONSTANTS.pensionInsuranceRate,
-          employeePercentage: 50,
-          employerPercentage: 50,
-          careEmployeePercentage: 50,
-          careEmployerPercentage: 50
-        }, { emitEvent: false });
+        this.form.patchValue(this.defaultKumiaiValues, { emitEvent: false });
       }
     }
   }
@@ -275,9 +272,6 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
     }
   }
 
-  /**
-   * 小数点入力制限
-   */
   onNumberInput(controlName: string, event: Event, maxDecimals: number) {
     const input = event.target as HTMLInputElement;
     let val = input.value;

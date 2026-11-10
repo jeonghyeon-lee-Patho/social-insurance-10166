@@ -123,18 +123,6 @@ export const INSURANCE_CONSTANTS = {
 };
 
 /**
- * 指定された都道府県のエリアを取得
- */
-export function getRegionByPrefecture(prefecture: string): InsuranceRegion | null {
-  for (const [region, prefectures] of Object.entries(REGION_PREFECTURE_MAP)) {
-    if (prefectures.includes(prefecture)) {
-      return region as InsuranceRegion;
-    }
-  }
-  return null;
-}
-
-/**
  * 指定された都道府県の協会けんぽ料率を取得
  */
 export function getKyokaiRateByPrefecture(prefecture: string): KyokaiRateData | null {
