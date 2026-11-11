@@ -10,8 +10,8 @@
         <div class="toolbar-primary-row">
           <div class="controls-group">
             <div class="search-box">
-              <input type="text" placeholder="検索: 氏名・社員番号・部署など" [ngModel]="searchText" (input)="onSearchInput($event)"
-                class="search-input" />
+              <input type="text" placeholder="検索: 氏名・社員番号・部署など" [ngModel]="searchText" 
+                (input)="onSearchInput($event)" class="search-input" />
             </div>
 
             <div class="sort-box">
@@ -132,6 +132,3 @@
 <!-- 編集モーダル -->
 <app-edit-employee-modal *ngIf="showEditModal" [selectedEmployee]="selectedEmployee" [currentUser]="currentUser"
   (onClose)="closeEditModal()" (onSave)="onEmployeeSaved($event)"></app-edit-employee-modal>
-
-
-  

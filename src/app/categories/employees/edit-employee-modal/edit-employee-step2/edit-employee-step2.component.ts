@@ -34,7 +34,7 @@ export class EditEmployeeStep2Component {
   @Input() bonusHistoryList: BonusHistoryView[] = [];
   @Input() hasPreviousInsurance = false;
   @Input() previousInsuranceAmount = 0;
-  
+
   // Step2から親コンポーネントへの出力
   @Output() insuranceStandardsChange = new EventEmitter<InsuranceStandardView[]>();
   @Output() salaryStandardsChange = new EventEmitter<SalaryStandardView[]>();
@@ -45,7 +45,7 @@ export class EditEmployeeStep2Component {
   isEditingFirstRecord = false;
   isInsuranceStandardModalOpen = false;
   selectedInsuranceStandard: InsuranceStandardView | null = null;
-  
+
   // Step2内のモーダル管理（報酬月額）
   isSalaryStandardModalOpen = false;
   selectedSalaryStandard: SalaryStandard | null = null;
@@ -126,7 +126,7 @@ export class EditEmployeeStep2Component {
     for (let i = 0; i < sorted.length - 1; i++) {
       const current = sorted[i];
       const next = sorted[i + 1];
-    
+
       let endMonth = Number(next.effectiveStartMonth) - 1;
       let endYear = Number(next.effectiveStartYear);
       if (endMonth === 0) {
@@ -297,56 +297,18 @@ export class EditEmployeeStep2Component {
    * 賞与額支給実績の管理
    * ======================================================================
    */
-
-  /**
-   * 賞与履歴編集モーダルを開く（新規追加または編集）
-   */
   openBonusHistoryModal(record?: BonusHistoryView) {
     this.selectedBonusHistory = record ? { ...record } : null;
     this.isBonusHistoryModalOpen = true;
     this.cdr.detectChanges();
   }
 
-  /**
-   * 賞与履歴編集モーダルを閉じる
-   */
   closeBonusHistoryModal() {
     this.isBonusHistoryModalOpen = false;
     this.selectedBonusHistory = null;
     this.cdr.detectChanges();
   }
 
-  get hireFiscalYear(): string {
-    if (!this.hireDate) return '';
-    const [y, m] = this.hireDate.split('-').map(Number);
-    const fiscalYear = m >= 4 ? y : y - 1;
-    return `［${fiscalYear}年度］`;
-  }
-  
-  onPreviousInsuranceToggle() {
-    if (!this.hasPreviousInsurance) {
-      this.previousInsuranceAmount = 0;
-    }
-    this.emitPreviousInsurance();
-  }
-  
-  onPreviousAmountChange() {
-    if (this.previousInsuranceAmount < 0) {
-      this.previousInsuranceAmount = 0;
-    }
-    this.emitPreviousInsurance();
-  }
-  
-  private emitPreviousInsurance() {
-    this.previousInsuranceChange.emit({
-      hasPreviousInsurance: this.hasPreviousInsurance,
-      previousInsuranceAmount: Number(this.previousInsuranceAmount) || 0
-    });
-  }
-
-  /**
-   * 賞与履歴を保存
-   */
   saveBonusHistory(bonusHistory: BonusHistory) {
     const now = new Date().toISOString();
     const updatedList = [...this.bonusHistoryList];
@@ -372,16 +334,13 @@ export class EditEmployeeStep2Component {
       const bYM = Number(b.paymentYear) * 100 + Number(b.paymentMonth);
       return bYM - aYM;
     });
-    
+
     this.bonusHistoryList = descSorted;
     this.bonusHistoryChange.emit(descSorted);
     this.closeBonusHistoryModal();
     this.cdr.detectChanges();
   }
 
-  /**
-   * 賞与履歴を削除
-   */
   deleteBonusHistory(index: number) {
     if (confirm('この賞与支給実績を削除してもよろしいですか？')) {
       const updatedList = this.bonusHistoryList.filter((_, i) => i !== index);
@@ -399,7 +358,7 @@ export class EditEmployeeStep2Component {
     const actualPaymentAmountDisplay = `${(bonus.actualPaymentAmount ?? 0).toLocaleString('ja-JP')} 円`;
     const healthStandardBonusAmountDisplay = `${(bonus.healthStandardBonusAmount ?? bonus.standardBonusAmount ?? 0).toLocaleString('ja-JP')} 円`;
     const pensionStandardBonusAmountDisplay = `${(bonus.pensionStandardBonusAmount ?? bonus.standardBonusAmount ?? 0).toLocaleString('ja-JP')} 円`;
-  
+
     return {
       ...bonus,
       paymentPeriod,
@@ -407,6 +366,38 @@ export class EditEmployeeStep2Component {
       healthStandardBonusAmountDisplay,
       pensionStandardBonusAmountDisplay
     };
+  }
+
+  get hireFiscalYear(): string {
+    if (!this.hireDate) return '';
+    const [y, m] = this.hireDate.split('-').map(Number);
+    const fiscalYear = m >= 4 ? y : y - 1;
+    return `［${fiscalYear}年度］`;
+  }
+
+  onPreviousInsuranceToggle() {
+    if (!this.hasPreviousInsurance) {
+      this.previousInsuranceAmount = 0;
+    }
+    this.emitPreviousInsurance();
+  }
+
+  onPreviousAmountChange(event?: Event) {
+    const sanitized = Math.max(0, Math.floor(Number(this.previousInsuranceAmount) || 0));
+    const capped = Math.min(5730000, sanitized);
+    this.previousInsuranceAmount = capped;
+    
+    if (event) {
+      (event.target as HTMLInputElement).value = String(capped);
+    }
+    this.emitPreviousInsurance();
+  }
+
+  private emitPreviousInsurance() {
+    this.previousInsuranceChange.emit({
+      hasPreviousInsurance: this.hasPreviousInsurance,
+      previousInsuranceAmount: Number(this.previousInsuranceAmount) || 0
+    });
   }
 
   /**
@@ -474,7 +465,7 @@ export class EditEmployeeStep2Component {
    */
   onVarChangedDecisionApplied(result: VarChangedDecisionResult) {
     if (!result || !result.canApply) return;
-  
+
     // 1. 改定適用期間の算出（4ヶ月目 〜 8月）
     const period = getVarChangedApplicationPeriod(
       result.changeStartYear,
@@ -482,10 +473,10 @@ export class EditEmployeeStep2Component {
       this.retirementDate,
       this.hireDate
     );
-  
+
     const newStartYM = period.startYear * 100 + period.startMonth;
     const newEndYM = period.endYear * 100 + period.endMonth;
-  
+
     // 改定開始月の直前月（YYYY, MM）
     let prevMonth = period.startMonth - 1;
     let prevYear = period.startYear;
@@ -493,7 +484,7 @@ export class EditEmployeeStep2Component {
       prevMonth = 12;
       prevYear -= 1;
     }
-  
+
     // 改定終了月の翌月（YYYY, MM）
     let nextMonth = period.endMonth + 1;
     let nextYear = period.endYear;
@@ -501,27 +492,27 @@ export class EditEmployeeStep2Component {
       nextMonth = 1;
       nextYear += 1;
     }
-  
+
     const updatedList: SalaryStandard[] = [];
-  
+
     // 2. 既存履歴の期間調整・分割処理
     for (const item of this.salaryStandardList) {
       const startYM = Number(item.effectiveStartYear) * 100 + Number(item.effectiveStartMonth);
       const endYM = (item.effectiveEndYear && item.effectiveEndMonth)
         ? Number(item.effectiveEndYear) * 100 + Number(item.effectiveEndMonth)
         : 999999;
-  
+
       // A. 完全に改定期間外（前または後）の履歴 -> そのまま残す
       if (endYM < newStartYM || startYM > newEndYM) {
         updatedList.push({ ...item });
         continue;
       }
-  
+
       // B. 改定期間内に完全にすっぽり収まる履歴 -> 上書きされるため破棄（追加しない）
       if (startYM >= newStartYM && endYM <= newEndYM) {
         continue;
       }
-  
+
       // C. 改定期間をまたいで前後両方に突き抜けている履歴 -> 前と後ろの2つに分割
       if (startYM < newStartYM && endYM > newEndYM) {
         // 前半部分
@@ -541,7 +532,7 @@ export class EditEmployeeStep2Component {
         });
         continue;
       }
-  
+
       // D. 前からまたがっている履歴 -> 終了月を改定直前月に短縮
       if (startYM < newStartYM && endYM >= newStartYM) {
         updatedList.push({
@@ -552,7 +543,7 @@ export class EditEmployeeStep2Component {
         });
         continue;
       }
-  
+
       // E. 後ろへまたがっている履歴 -> 開始月を改定終了翌月に繰り下げ
       if (startYM <= newEndYM && endYM > newEndYM) {
         updatedList.push({
@@ -564,11 +555,11 @@ export class EditEmployeeStep2Component {
         continue;
       }
     }
-  
+
     // 3. 随時改定の新規レコードを作成して追加
     const now = new Date().toISOString();
     const existingRef = this.salaryStandardList[0];
-  
+
     const newRecord: SalaryStandard = {
       id: `salary_${Date.now()}`,
       employeeId: existingRef?.employeeId || '',
@@ -586,12 +577,12 @@ export class EditEmployeeStep2Component {
       createdAt: now,
       updatedAt: now
     };
-  
+
     updatedList.push(newRecord);
-  
+
     // 4. ソートおよび親への変更通知
     this.updateSalaryStandardPeriods(updatedList.map(item => this.toSalaryStandardView(item)));
-  
+
     alert(
       `随時改定を給与履歴に反映しました。\n` +
       `（適用期間: ${period.startYear}/${String(period.startMonth).padStart(2, '0')} 〜 ` +

@@ -31,5 +31,4 @@ export interface BonusHistoryView extends BonusHistory {
   actualPaymentAmountDisplay: string;
   healthStandardBonusAmountDisplay: string;
   pensionStandardBonusAmountDisplay: string;
-  standardBonusAmountDisplay?: string;
 }

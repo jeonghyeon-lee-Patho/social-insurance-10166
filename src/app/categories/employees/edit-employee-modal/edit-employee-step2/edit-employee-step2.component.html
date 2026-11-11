@@ -144,8 +144,8 @@
         </label>
         <div class="input-wrapper-sm">
           <input type="number" id="prevAmount" [(ngModel)]="previousInsuranceAmount"
-            (ngModelChange)="onPreviousAmountChange()" class="form-control prev-amount-input" placeholder="0" min="0"
-            step="1000" />
+            (input)="onPreviousAmountChange($event)" class="form-control prev-amount-input" placeholder="0" min="0"
+            max="5730000" step="1000" />
           <span class="unit-suffix">円</span>
         </div>
         <span class="prev-hint">
