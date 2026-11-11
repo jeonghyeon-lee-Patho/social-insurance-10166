@@ -54,7 +54,7 @@ export class EditEmployeeModalComponent implements OnInit {
   dependents: Dependent[] = [];
   isEditingDependent = false;
   editingIndex = -1;
-  editingDependent: any = null;
+  editingDependent: Dependent | null = null;
 
   // 扶養家族の生年月日 3連セレクト用
   selectedDepBirthYear: number | '' = '';
@@ -231,18 +231,14 @@ export class EditEmployeeModalComponent implements OnInit {
         }
 
         for (const sal of (this.salaryStandardList || [])) {
-          const anySal = sal as any;
-          const endYM = anySal.effectiveEndYear && anySal.effectiveEndMonth
-            ? anySal.effectiveEndYear * 100 + anySal.effectiveEndMonth
-            : (anySal.effectiveStartYear && anySal.effectiveStartMonth ? anySal.effectiveStartYear * 100 + anySal.effectiveStartMonth : 0);
+          const endYM = sal.effectiveEndYear && sal.effectiveEndMonth
+            ? sal.effectiveEndYear * 100 + sal.effectiveEndMonth
+            : (sal.effectiveStartYear && sal.effectiveStartMonth ? sal.effectiveStartYear * 100 + sal.effectiveStartMonth : 0);
           if (endYM > maxHistoryYM) maxHistoryYM = endYM;
         }
 
         for (const b of (this.bonusHistoryList || [])) {
-          const anyB = b as any;
-          const bonusYM = anyB.paymentYear && anyB.paymentMonth
-            ? anyB.paymentYear * 100 + anyB.paymentMonth
-            : (anyB.year && anyB.month ? anyB.year * 100 + anyB.month : 0);
+          const bonusYM = (b.paymentYear && b.paymentMonth) ? (b.paymentYear * 100 + b.paymentMonth) : 0;
           if (bonusYM > maxHistoryYM) maxHistoryYM = bonusYM;
         }
 
@@ -318,11 +314,9 @@ export class EditEmployeeModalComponent implements OnInit {
     }
 
     // 前職通算データの復元
-    const empData = this.selectedEmployee as any;
-    this.hasPreviousInsurance = empData?.hasPreviousInsurance ?? false;
-    this.previousInsuranceAmount = empData?.previousInsuranceAmount ?? 0;
-
-    this.employeeAnnualIncome = empData.employeeAnnualIncome || 0;
+    this.hasPreviousInsurance = this.selectedEmployee.hasPreviousInsurance ?? false;
+    this.previousInsuranceAmount = this.selectedEmployee.previousInsuranceAmount ?? 0;
+    this.employeeAnnualIncome = this.selectedEmployee.employeeAnnualIncome ?? 0;
     this.dependents = this.selectedEmployee.dependents ? [...this.selectedEmployee.dependents] : [];
     this.cancelEditDependent();
 
@@ -427,7 +421,7 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   sanitizeDepNumber(field: 'expectedAnnualIncome' | 'remittanceAmount') {
-    if (this.editingDependent && this.editingDependent[field] < 0) {
+    if (this.editingDependent && (this.editingDependent[field] ?? 0) < 0) {
       this.editingDependent[field] = 0;
     }
   }
@@ -442,7 +436,7 @@ export class EditEmployeeModalComponent implements OnInit {
       this.editingDependent.dateOfBirth = dateString;
     }
   }
-  
+
   startAddDependent() {
     this.editingIndex = -1;
     this.editingDependent = {
@@ -524,7 +518,12 @@ export class EditEmployeeModalComponent implements OnInit {
     this.editingDependent.name = name;
     this.editingDependent.dateOfBirth = birthDateStr;
     this.editingDependent.expectedAnnualIncome = Math.max(0, Number(this.editingDependent.expectedAnnualIncome) || 0);
-    this.editingDependent.remittanceAmount = Math.max(0, Number(this.editingDependent.remittanceAmount) || 0);
+  
+    if (this.editingDependent.isLivingTogether) {
+      this.editingDependent.remittanceAmount = 0;
+    } else {
+      this.editingDependent.remittanceAmount = Math.max(0, Number(this.editingDependent.remittanceAmount) || 0);
+    }
 
     if (this.editingIndex === -1) {
       this.dependents.push({ ...this.editingDependent });

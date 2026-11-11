@@ -39,7 +39,7 @@ export interface Dependent {
 export interface Employee {
   id: string;                              // ドキュメントID（Firestore）
   employeeNumber: string;                  // 社員番号（企業内の固有識別コード）
-  employmentStatus: EmploymentStatus;      // 在籍ステータス
+  employmentStatus?: EmploymentStatus;      // 在籍ステータス
 
   // 基本情報（ステップ1）
   nameKanji?: string;                      // 氏名（漢字）
@@ -49,27 +49,23 @@ export interface Employee {
   hireDate: string;                        // 入社年月日（ISO 8601形式: YYYY-MM-DD）
   retirementDate?: string;                 // 退職年月日（ISO 8601形式: YYYY-MM-DD）
   hasMissingHistory?: boolean;             // 報酬月額未入力期間があるかどうか
-  
+
   // 追加人事属性（ステップ1）
   gender?: 'male' | 'female';
   employmentType?: 'regular' | 'contract' | 'partTime' | 'executive';
   department?: string;
   position?: string;
   employmentInsuranceNumber?: string;
- 
-  // 扶養家族情報（ステップ1）
+
   employeeAnnualIncome?: number;
   hasIneligibleDependent?: boolean;
   dependents?: Dependent[];
-    
-  // 報酬・賞与・保険履歴（ステップ2）
-  insuranceStandardIds?: string[];         // 社会保険適用基準ID（履歴レコード）
-  salaryStandardIds?: string[];            // 標準報酬月額ID（履歴レコード）
-  bonusHistoryIds?: string[];              // 賞与履歴ID（レコード）
-  
+  hasPreviousInsurance?: boolean;
+  previousInsuranceAmount?: number;
+
   // ※個別の履歴レコードはサブコレクションまたは別コレクションで管理
   salaryHistories?: SalaryHistory[];       // 報酬月額履歴（レガシー用途）
-  
+
   // メタデータ
   createdAt: string;                       // 作成日時（ISO 8601形式）
   updatedAt: string;                       // 更新日時（ISO 8601形式）

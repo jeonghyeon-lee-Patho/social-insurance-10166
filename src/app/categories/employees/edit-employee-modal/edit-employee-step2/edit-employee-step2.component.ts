@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { InsuranceStandard, InsuranceStandardView, InsuranceExceptionType } from '../../../../models/insurance-standard.model';
@@ -11,6 +11,7 @@ import { EditBonusHistoryModalComponent } from '../edit-bonus-history-modal/edit
 import { SalarySimulatorRegularComponent } from '../salary-simulator-regular/salary-simulator-regular.component';
 import { SalarySimulatorChangedComponent } from '../salary-simulator-changed/salary-simulator-changed.component';
 import { RegularDecisionResult, VarChangedDecisionResult, getVarChangedApplicationPeriod } from '../../../../utils/salary-simulator.util';
+import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calculator.util';
 
 @Component({
   selector: 'app-edit-employee-step2',
@@ -46,7 +47,6 @@ export class EditEmployeeStep2Component implements OnChanges {
   selectedInsuranceStandard: InsuranceStandard | null = null;
   
   // Step2内のモーダル管理（報酬月額）
-  isEditingSalaryFirstRecord = false;
   isSalaryStandardModalOpen = false;
   selectedSalaryStandard: SalaryStandard | null = null;
 
@@ -68,18 +68,11 @@ export class EditEmployeeStep2Component implements OnChanges {
    * ======================================================================
    */
 
-  isSalaryHireDateRecord(record: SalaryStandardView): boolean {
-    if (!this.hireDate) return false;
-    const [hY, hM] = this.hireDate.split('-').map(Number);
-    return record.effectiveStartYear === hY && record.effectiveStartMonth === hM;
-  }
-
   /**
    * 報酬月額編集モーダルを開く（新規追加または編集）
    */
   openSalaryStandardModal(record?: SalaryStandard | SalaryStandardView) {
     this.selectedSalaryStandard = record ? ({ ...record } as SalaryStandard) : null;
-    this.isEditingSalaryFirstRecord = record ? this.isSalaryHireDateRecord(record as SalaryStandardView) : false;
     this.isSalaryStandardModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -264,19 +257,10 @@ export class EditEmployeeStep2Component implements OnChanges {
 
     if (sorted.length > 0) {
       const last = sorted[sorted.length - 1];
-      if (this.retirementDate) {
-        const [rY, rM, rD] = this.retirementDate.split('-').map(Number);
-        const lastDay = new Date(rY, rM, 0).getDate();
-        if (rD === lastDay) {
-          last.effectiveEndYear = rY;
-          last.effectiveEndMonth = rM;
-        } else {
-          let eM = rM - 1;
-          let eY = rY;
-          if (eM === 0) { eM = 12; eY -= 1; }
-          last.effectiveEndYear = eY;
-          last.effectiveEndMonth = eM;
-        }
+      const endYM = calculateInsuranceEndYearMonth(this.retirementDate, this.hireDate);
+      if (endYM) {
+        last.effectiveEndYear = endYM.year;
+        last.effectiveEndMonth = endYM.month;
       } else {
         last.effectiveEndYear = undefined;
         last.effectiveEndMonth = undefined;

@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, doc, setDoc, getDocs, query, where, deleteField, deleteDoc, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDocs, query, where, deleteField, writeBatch } from '@angular/fire/firestore';
 import { Employee, EmployeeView, Dependent } from '../../../models/employee.model';
 import { InsuranceStandardView, InsuranceExceptionType, InsuranceStandard } from '../../../models/insurance-standard.model';
-import { SalaryStandardView } from '../../../models/salary-standard.model';
-import { BonusHistoryView } from '../../../models/bonus-history.model';
+import { SalaryStandard, SalaryStandardView } from '../../../models/salary-standard.model';
+import { BonusHistory, BonusHistoryView } from '../../../models/bonus-history.model';
 import { InsuranceRateMaster } from '../../../models/insurance-rate.model';
 import { calculateInsuranceEndYearMonth } from '../../../utils/insurance-calculator.util';
 import { toEmployeeView } from '../../../utils/employee.util';
@@ -85,7 +85,7 @@ export class EditEmployeeModalService {
     if (snap.empty) return [];
 
     return snap.docs.map(d => {
-      const data = d.data() as any;
+      const data = d.data() as SalaryStandard;
       let effectivePeriod = `${data.effectiveStartYear}/${String(data.effectiveStartMonth).padStart(2, '0')}`;
       effectivePeriod += data.effectiveEndYear && data.effectiveEndMonth
         ? ` ~ ${data.effectiveEndYear}/${String(data.effectiveEndMonth).padStart(2, '0')}`
@@ -108,7 +108,7 @@ export class EditEmployeeModalService {
     if (snap.empty) return [];
 
     return snap.docs.map(d => {
-      const data = d.data() as any;
+      const data = d.data() as BonusHistory;  
       return {
         ...data,
         id: d.id,
@@ -266,13 +266,15 @@ export class EditEmployeeModalService {
         dateOfBirth: formValue.dateOfBirth,
         hireDate: formValue.hireDate,
         retirementDate: formValue.retirementDate || undefined,
+        hasMissingHistory,
+
         gender: formValue.gender || 'male',
         employmentType: formValue.employmentType || 'regular',
         department: formValue.department?.trim() || undefined,
         position: formValue.position?.trim() || undefined,
         employmentInsuranceNumber: formValue.employmentInsuranceNumber?.trim() || undefined,
+
         employeeAnnualIncome,
-        hasMissingHistory,
         hasIneligibleDependent,
         dependents,
         hasPreviousInsurance,
@@ -389,7 +391,6 @@ export class EditEmployeeModalService {
         actualPaymentAmount: b.actualPaymentAmount,
         healthStandardBonusAmount: b.healthStandardBonusAmount ?? b.standardBonusAmount ?? 0,
         pensionStandardBonusAmount: b.pensionStandardBonusAmount ?? b.standardBonusAmount ?? 0,
-        standardBonusAmount: b.healthStandardBonusAmount ?? b.standardBonusAmount ?? 0,
         createdAt: b.createdAt || now,
         updatedAt: now,
         createdBy: b.createdBy || currentUserUid,

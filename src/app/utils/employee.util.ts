@@ -14,6 +14,7 @@ export function checkSalaryHistoryGaps(
     effectiveStartMonth: number;
     effectiveEndYear?: number;
     effectiveEndMonth?: number;
+    monthlyAmount?: number;
   }>
 ): boolean {
   if (!hireDate) return false;
@@ -54,7 +55,7 @@ export function checkSalaryHistoryGaps(
     const targetYM = currY * 100 + currM;
 
     const isCovered = salaryStandards.some(s => {
-      const hasValidAmount = (Number((s as any).monthlyAmount) || 0) > 0;
+      const hasValidAmount = (Number(s.monthlyAmount) || 0) > 0;
       const sStart = Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth);
       const sEnd = (s.effectiveEndYear && s.effectiveEndMonth)
         ? Number(s.effectiveEndYear) * 100 + Number(s.effectiveEndMonth)
@@ -99,12 +100,15 @@ export function getTodayString(): string {
  * 満年齢を計算
  */
 export function calculateAge(dateOfBirth: string): number {
-  const now = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = now.getFullYear() - birthDate.getFullYear();
-  const monthDiff = now.getMonth() - birthDate.getMonth();
+  if (!dateOfBirth) return 0;
+  const [bYear, bMonth, bDay] = dateOfBirth.split('-').map(Number);
+  if (!bYear || !bMonth || !bDay) return 0;
 
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
+  const now = new Date();
+  let age = now.getFullYear() - bYear;
+  const monthDiff = (now.getMonth() + 1) - bMonth;
+
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < bDay)) {
     age--;
   }
   return age;
@@ -138,19 +142,19 @@ export function checkDependentEligibility(
     const empIncome = Number(employeeAnnualIncome) || 0;
 
     if (dep.isLivingTogether) {
-      if (depIncome * 2 >= empIncome) {
+      if (depIncome > 0 && (depIncome * 2 >= empIncome)) {
         isHealthEligible = false;
       }
     } else {
       const remittance = Number(dep.remittanceAmount) || 0;
-      if (depIncome >= remittance) {
+      if (depIncome >= remittance || remittance === 0) {
         isHealthEligible = false;
       }
     }
   }
 
   const isPension3Eligible = dep.relationship === 'spouse' && isHealthEligible && age >= 20 && age < 60;
-  
+
   return { isHealthEligible, isPension3Eligible };
 }
 
@@ -175,6 +179,8 @@ export function toEmployeeView(employee: Employee): EmployeeView {
     age: calculateAge(employee.dateOfBirth),
     hasMissingHistory: employee.hasMissingHistory ?? false,
     hasIneligibleDependent: employee.hasIneligibleDependent ?? false,
+    hasPreviousInsurance: employee.hasPreviousInsurance ?? false,
+    previousInsuranceAmount: employee.previousInsuranceAmount ?? 0,
     dependents: employee.dependents ? [...employee.dependents] : []
   };
 }
@@ -253,72 +259,11 @@ export function filterBySearch(employees: EmployeeView[], searchText: string): E
 
 export function formatDate(dateString: string): string {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}/${month}/${day}`;
-}
+  const cleanDate = dateString.split('T')[0].replace(/\//g, '-');
+  const [y, m, d] = cleanDate.split('-');
 
-/**
- * ナチュラルソート用の比較関数
- */
-function naturalSort(a: string, b: string): number {
-  // 文字列をテキストと数字に分割してソート
-  const regex = /(\d+)|(\D+)/g;
-  const aChunks = (a.match(regex) || []).map(chunk => isNaN(Number(chunk)) ? chunk : Number(chunk));
-  const bChunks = (b.match(regex) || []).map(chunk => isNaN(Number(chunk)) ? chunk : Number(chunk));
-
-  for (let i = 0; i < Math.min(aChunks.length, bChunks.length); i++) {
-    const aChunk = aChunks[i];
-    const bChunk = bChunks[i];
-
-    // 両方が数字の場合は数値比較
-    if (typeof aChunk === 'number' && typeof bChunk === 'number') {
-      if (aChunk !== bChunk) {
-        return aChunk - bChunk;
-      }
-    } else {
-      // 文字列比較
-      const comparison = String(aChunk).localeCompare(String(bChunk), 'ja-JP');
-      if (comparison !== 0) {
-        return comparison;
-      }
-    }
-  }
-
-  // 長さが異なる場合、短い方が先
-  return aChunks.length - bChunks.length;
-}
-
-/**
- * ソート用の比較関数
- */
-export type SortOrder = 'employeeNumber' | 'name' | 'hireDate' | 'hireDateDesc';
-
-export function sortEmployees(employees: EmployeeView[], sortOrder: SortOrder): EmployeeView[] {
-  const sorted = [...employees];
-
-  switch (sortOrder) {
-    case 'employeeNumber':
-      // ナチュラルソート（EMP1 > EMP2 > EMP10 > EMP20）
-      return sorted.sort((a, b) => naturalSort(a.employeeNumber, b.employeeNumber));
-
-    case 'name':
-      // カタカナ名（フリガナ）を基準でソート
-      return sorted.sort((a, b) =>
-        (a.nameKana || '').localeCompare(b.nameKana || '', 'ja-JP')
-      );
-
-    case 'hireDate':
-      return sorted.sort((a, b) => new Date(a.hireDate).getTime() - new Date(b.hireDate).getTime());
-
-    case 'hireDateDesc':
-      return sorted.sort((a, b) => new Date(b.hireDate).getTime() - new Date(a.hireDate).getTime());
-
-    default:
-      return sorted;
-  }
+  if (!y || !m || !d) return dateString;
+  return `${y}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
 }
 
 

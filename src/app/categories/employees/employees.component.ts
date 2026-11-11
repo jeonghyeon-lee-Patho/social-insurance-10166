@@ -107,10 +107,10 @@ export class EmployeesComponent implements OnInit, OnDestroy {
   /**
    * 社員一覧のソート処理（社員番号、氏名、年齢、入社年月日）
    */
-  private sortEmployeeList(list: any[], key: SortKey, direction: SortDirection): any[] {
+  private sortEmployeeList(list: EmployeeView[], key: SortKey, direction: SortDirection): EmployeeView[] {
     const factor = direction === 'asc' ? 1 : -1;
 
-    const tieBreaker = (a: any, b: any) => {
+    const tieBreaker = (a: EmployeeView, b: EmployeeView) => {
       return (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true });
     };
 
@@ -140,10 +140,7 @@ export class EmployeesComponent implements OnInit, OnDestroy {
           diff = 0;
       }
 
-      if (diff !== 0) {
-        return diff * factor;
-      }
-
+      if (diff !== 0) return diff * factor;
       return tieBreaker(a, b);
     });
   }
@@ -218,6 +215,7 @@ export class EmployeesComponent implements OnInit, OnDestroy {
    * 社員を削除する
    */
   async deleteEmployee(employee: EmployeeView) {
+    if (!this.currentUser) return;
     // 確認ダイアログ
     const confirmMessage = `※すでに給与および社会保険計算の実績が存在する場合、データの不整合が発生する可能性があります。
     退職した社員の場合は削除せず、『退職年月日』を入力してください。
