@@ -2,24 +2,6 @@
  * 社員（Employee）データモデル
  */
 
-/**
- * 在籍ステータスの列挙型
- */
-export enum EmploymentStatus {
-  ACTIVE = 'active',       // 在籍者
-  UPCOMING = 'upcoming',   // 将来在籍者
-  RETIRED = 'retired'      // 退職者
-}
-
-/**
- * 報酬月額履歴の単位インターフェース
- */
-export interface SalaryHistory {
-  year: number;            // 年（YYYY）
-  month: number;           // 月（1-12）
-  standardMonthlyAmount: number; // 標準報酬月額
-}
-
 export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
 
 export interface Dependent {
@@ -39,8 +21,7 @@ export interface Dependent {
 export interface Employee {
   id: string;                              // ドキュメントID（Firestore）
   employeeNumber: string;                  // 社員番号（企業内の固有識別コード）
-  employmentStatus?: EmploymentStatus;      // 在籍ステータス
-
+  
   // 基本情報（ステップ1）
   nameKanji?: string;                      // 氏名（漢字）
   nameKana: string;                        // 氏名（カナ）
@@ -62,9 +43,6 @@ export interface Employee {
   dependents?: Dependent[];
   hasPreviousInsurance?: boolean;
   previousInsuranceAmount?: number;
-
-  // ※個別の履歴レコードはサブコレクションまたは別コレクションで管理
-  salaryHistories?: SalaryHistory[];       // 報酬月額履歴（レガシー用途）
 
   // メタデータ
   createdAt: string;                       // 作成日時（ISO 8601形式）

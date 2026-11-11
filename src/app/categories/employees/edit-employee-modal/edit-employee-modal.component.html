@@ -135,9 +135,12 @@
           <label class="form-label">雇用保険番号</label>
           <div class="form-field-content">
             <div class="form-input-wrapper">
-              <input type="text" formControlName="employmentInsuranceNumber" placeholder="例: 1234-567890-1 または 11桁" class="form-control" maxlength="20" />
+              <input type="text" formControlName="employmentInsuranceNumber" placeholder="例: 1234-567890-1 または 11桁"
+                class="form-control" maxlength="20" />
             </div>
-            <div *ngIf="form.get('employmentInsuranceNumber')?.invalid && form.get('employmentInsuranceNumber')?.touched" class="error-message">
+            <div
+              *ngIf="form.get('employmentInsuranceNumber')?.invalid && (form.get('employmentInsuranceNumber')?.touched || form.get('employmentInsuranceNumber')?.dirty)"
+              class="error-message">
               {{ getErrorMessage('employmentInsuranceNumber') }}
             </div>
           </div>
@@ -169,7 +172,7 @@
               </select>
             </div>
             <div
-              *ngIf="form.get('dateOfBirth')?.invalid && (form.get('dateOfBirth')?.touched || form.get('dateOfBirth')?.dirty)"
+              *ngIf="(form.get('dateOfBirth')?.touched || form.get('dateOfBirth')?.dirty) && getErrorMessage('dateOfBirth')"
               class="error-message">
               {{ getErrorMessage('dateOfBirth') }}
             </div>
@@ -206,7 +209,8 @@
               ※ 入社年月日は変更できません。変更が必要な場合は社員情報を削除後、新規登録してください。
             </div>
 
-            <div *ngIf="!isHireDateLocked && form.get('hireDate')?.touched && form.get('hireDate')?.invalid"
+            <div
+              *ngIf="!isHireDateLocked && (form.get('hireDate')?.touched || form.get('hireDate')?.dirty) && getErrorMessage('hireDate')"
               class="error-message">
               {{ getErrorMessage('hireDate') }}
             </div>
@@ -236,7 +240,8 @@
                 <option *ngFor="let d of retireDays" [value]="d">{{ d }}日</option>
               </select>
             </div>
-            <div *ngIf="form.get('retirementDate')?.touched && form.get('retirementDate')?.invalid"
+            <div
+              *ngIf="(form.get('retirementDate')?.touched || form.get('retirementDate')?.dirty) && getErrorMessage('retirementDate')"
               class="error-message">
               {{ getErrorMessage('retirementDate') }}
             </div>
@@ -258,7 +263,7 @@
             <div class="emp-income-input-wrap">
               <input type="number" class="dep-input emp-income-input" [(ngModel)]="employeeAnnualIncome"
                 [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
-                (input)="sanitizeEmployeeIncome()" />
+                (input)="sanitizeEmployeeIncome()" /> 
               <span class="unit-text">円</span>
             </div>
           </div>
@@ -270,7 +275,7 @@
           <!-- 家族一覧（アコーディオン表示） -->
           <div class="dependent-list" *ngIf="dependents.length > 0">
             <ng-container *ngFor="let dep of dependents; let i = index">
-              <div *ngIf="editingIndex !== i" class="dependent-item-row" [ngClass]="getDependentStatusClass(dep)"
+              <div class="dependent-item-row" [ngClass]="getDependentStatusClass(dep)"
                 (click)="startEditDependent(dep, i)">
                 <span class="dep-summary-text">
                   <span class="dep-rel-badge">{{ getRelationshipText(dep.relationship) }}</span>
@@ -386,24 +391,19 @@
 
       <!-- ステップ 2: 報酬・保険履歴（Step2コンポーネントに委譲） -->
       <div *ngIf="currentStep === 2" class="step-content">
-        <div *ngIf="isLoadingHistories" style="text-align: center; padding: 60px 20px; color: #64748b; font-size: 14px;">
+        <div *ngIf="isLoadingHistories"
+          style="text-align: center; padding: 60px 20px; color: #64748b; font-size: 14px;">
           履歴データを読み込んでいます...
         </div>
 
-        <app-edit-employee-step2 *ngIf="!isLoadingHistories"
-          [employeeNumber]="form.get('employeeNumber')?.value"
-          [displayName]="getDisplayNameForModal()" 
-          [hireDate]="form.get('hireDate')?.value"
-          [retirementDate]="form.get('retirementDate')?.value" 
-          [insuranceRateMasters]="insuranceRateMasters"
-          [insuranceStandardList]="insuranceStandardList" 
-          [salaryStandardList]="salaryStandardList"
-          [bonusHistoryList]="bonusHistoryList" 
-          [hasPreviousInsurance]="hasPreviousInsurance"
+        <app-edit-employee-step2 *ngIf="!isLoadingHistories" [employeeNumber]="form.get('employeeNumber')?.value"
+          [displayName]="getDisplayNameForModal()" [hireDate]="form.get('hireDate')?.value"
+          [retirementDate]="form.get('retirementDate')?.value" [insuranceRateMasters]="insuranceRateMasters"
+          [insuranceStandardList]="insuranceStandardList" [salaryStandardList]="salaryStandardList"
+          [bonusHistoryList]="bonusHistoryList" [hasPreviousInsurance]="hasPreviousInsurance"
           [previousInsuranceAmount]="previousInsuranceAmount"
           (insuranceStandardsChange)="onInsuranceStandardsChange($event)"
-          (salaryStandardsChange)="onSalaryStandardsChange($event)" 
-          (bonusHistoryChange)="onBonusHistoryChange($event)"
+          (salaryStandardsChange)="onSalaryStandardsChange($event)" (bonusHistoryChange)="onBonusHistoryChange($event)"
           (previousInsuranceChange)="onPreviousInsuranceChange($event)">
         </app-edit-employee-step2>
       </div>

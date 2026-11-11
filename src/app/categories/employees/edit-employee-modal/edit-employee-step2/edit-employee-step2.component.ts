@@ -20,7 +20,7 @@ import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calc
   templateUrl: './edit-employee-step2.component.html',
   styleUrl: './edit-employee-step2.component.css'
 })
-export class EditEmployeeStep2Component implements OnChanges {
+export class EditEmployeeStep2Component {
   // 親コンポーネントからの入力
   @Input() employeeNumber: string = '';
   @Input() displayName: string = '';
@@ -44,7 +44,7 @@ export class EditEmployeeStep2Component implements OnChanges {
   // Step2内のモーダル管理（社会保険適用基準）
   isEditingFirstRecord = false;
   isInsuranceStandardModalOpen = false;
-  selectedInsuranceStandard: InsuranceStandard | null = null;
+  selectedInsuranceStandard: InsuranceStandardView | null = null;
   
   // Step2内のモーダル管理（報酬月額）
   isSalaryStandardModalOpen = false;
@@ -55,112 +55,6 @@ export class EditEmployeeStep2Component implements OnChanges {
   selectedBonusHistory: BonusHistory | null = null;
 
   private cdr = inject(ChangeDetectorRef);
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['hireDate'] || changes['retirementDate']) {
-      this.cdr.detectChanges();
-    }
-  }
-
-  /**
-   * ======================================================================
-   * 報酬月額（給与）等級履歴 の管理
-   * ======================================================================
-   */
-
-  /**
-   * 報酬月額編集モーダルを開く（新規追加または編集）
-   */
-  openSalaryStandardModal(record?: SalaryStandard | SalaryStandardView) {
-    this.selectedSalaryStandard = record ? ({ ...record } as SalaryStandard) : null;
-    this.isSalaryStandardModalOpen = true;
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * 報酬月額編集モーダルを閉じる
-   */
-  closeSalaryStandardModal() {
-    this.isSalaryStandardModalOpen = false;
-    this.selectedSalaryStandard = null;
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * 報酬月額を保存
-   */
-  saveSalaryStandard(salaryStandard: SalaryStandard) {
-    const now = new Date().toISOString();
-    const updatedList = [...this.salaryStandardList];
-
-    if (this.selectedSalaryStandard && this.selectedSalaryStandard.id) {
-      // 編集時
-      const index = updatedList.findIndex(r => r.id === this.selectedSalaryStandard?.id);
-      if (index >= 0) {
-        salaryStandard.updatedAt = now;
-        updatedList[index] = this.toSalaryStandardView(salaryStandard);
-      }
-    } else {
-      // 新規追加時
-      if (!salaryStandard.id) {
-        salaryStandard.id = `salary_${Date.now()}`;
-      }
-      salaryStandard.createdAt = now;
-      salaryStandard.updatedAt = now;
-      updatedList.push(this.toSalaryStandardView(salaryStandard));
-    }
-
-    // 期間の自動クローズロジック
-    this.updateSalaryStandardPeriods(updatedList);
-    this.closeSalaryStandardModal();
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * 報酬月額を削除
-   */
-  deleteSalaryStandard(index: number) {
-    if (confirm('この報酬月額を削除してもよろしいですか？')) {
-      const updatedList = this.salaryStandardList.filter((_, i) => i !== index);
-      this.updateSalaryStandardPeriods(updatedList);
-      this.cdr.detectChanges();
-    }
-  }
-
-  /**
-   * 報酬月額の期間を自動更新（開始年月が新しい方の終了月を前の基準の終了月に設定）
-   */
-  private updateSalaryStandardPeriods(list: SalaryStandardView[]) {
-    const sorted = [...list].sort((a, b) => {
-      const aYM = Number(a.effectiveStartYear) * 100 + Number(a.effectiveStartMonth);
-      const bYM = Number(b.effectiveStartYear) * 100 + Number(b.effectiveStartMonth);
-      return bYM - aYM;
-    });
-
-    const updatedViews = sorted.map(item => this.toSalaryStandardView(item));
-    this.salaryStandardList = updatedViews;
-    this.salaryStandardsChange.emit(updatedViews);
-  }
-
-  /**
-   * SalaryStandard を SalaryStandardView に変換
-   */
-  private toSalaryStandardView(salary: SalaryStandard): SalaryStandardView {
-    let effectivePeriod = `${salary.effectiveStartYear}/${String(salary.effectiveStartMonth).padStart(2, '0')}`;
-    if (salary.effectiveEndYear && salary.effectiveEndMonth) {
-      effectivePeriod += ` 〜 ${salary.effectiveEndYear}/${String(salary.effectiveEndMonth).padStart(2, '0')}`;
-    } else {
-      effectivePeriod += ' 〜';
-    }
-
-    const monthlyAmountDisplay = `${(salary.monthlyAmount ?? 0).toLocaleString('ja-JP')} 円`;
-
-    return {
-      ...salary,
-      effectivePeriod,
-      monthlyAmountDisplay
-    };
-  }
 
   /**
    * ======================================================================
@@ -173,28 +67,19 @@ export class EditEmployeeStep2Component implements OnChanges {
     return record.effectiveStartYear === hY && record.effectiveStartMonth === hM;
   }
 
-  /**
-   * 社会保険適用基準モーダルを開く（新規追加または編集）
-   */
-  openInsuranceStandardModal(record?: InsuranceStandard | InsuranceStandardView) {
-    this.selectedInsuranceStandard = record ? ({ ...record } as InsuranceStandard) : null;
-    this.isEditingFirstRecord = record ? this.isHireDateRecord(record as InsuranceStandardView) : false;
+  openInsuranceStandardModal(record?: InsuranceStandardView) {
+    this.selectedInsuranceStandard = record ? { ...record } : null;
+    this.isEditingFirstRecord = record ? this.isHireDateRecord(record) : false;
     this.isInsuranceStandardModalOpen = true;
     this.cdr.detectChanges();
   }
 
-  /**
-   * 社会保険適用基準モーダルを閉じる
-   */
   closeInsuranceStandardModal() {
     this.isInsuranceStandardModalOpen = false;
     this.selectedInsuranceStandard = null;
     this.cdr.detectChanges();
   }
 
-  /**
-   * 社会保険適用基準を保存
-   */
   saveInsuranceStandard(insuranceStandard: InsuranceStandard) {
     const now = new Date().toISOString();
     const updatedList = [...this.insuranceStandardList];
@@ -220,9 +105,6 @@ export class EditEmployeeStep2Component implements OnChanges {
     this.cdr.detectChanges();
   }
 
-  /**
-   * 社会保険適用基準を削除
-   */
   deleteInsuranceStandard(index: number) {
     if (confirm('この適用基準を削除してもよろしいですか？')) {
       const updatedList = this.insuranceStandardList.filter((_, i) => i !== index);
@@ -244,7 +126,7 @@ export class EditEmployeeStep2Component implements OnChanges {
     for (let i = 0; i < sorted.length - 1; i++) {
       const current = sorted[i];
       const next = sorted[i + 1];
-  
+    
       let endMonth = Number(next.effectiveStartMonth) - 1;
       let endYear = Number(next.effectiveStartYear);
       if (endMonth === 0) {
@@ -326,6 +208,92 @@ export class EditEmployeeStep2Component implements OnChanges {
 
   /**
    * ======================================================================
+   * 報酬月額（給与）等級履歴 の管理
+   * ======================================================================
+   */
+  openSalaryStandardModal(record?: SalaryStandardView) {
+    this.selectedSalaryStandard = record ? { ...record } : null;
+    this.isSalaryStandardModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeSalaryStandardModal() {
+    this.isSalaryStandardModalOpen = false;
+    this.selectedSalaryStandard = null;
+    this.cdr.detectChanges();
+  }
+
+  saveSalaryStandard(salaryStandard: SalaryStandard) {
+    const now = new Date().toISOString();
+    const updatedList = [...this.salaryStandardList];
+
+    if (this.selectedSalaryStandard && this.selectedSalaryStandard.id) {
+      // 編集時
+      const index = updatedList.findIndex(r => r.id === this.selectedSalaryStandard?.id);
+      if (index >= 0) {
+        salaryStandard.updatedAt = now;
+        updatedList[index] = this.toSalaryStandardView(salaryStandard);
+      }
+    } else {
+      // 新規追加時
+      if (!salaryStandard.id) {
+        salaryStandard.id = `salary_${Date.now()}`;
+      }
+      salaryStandard.createdAt = now;
+      salaryStandard.updatedAt = now;
+      updatedList.push(this.toSalaryStandardView(salaryStandard));
+    }
+
+    this.updateSalaryStandardPeriods(updatedList);
+    this.closeSalaryStandardModal();
+    this.cdr.detectChanges();
+  }
+
+  deleteSalaryStandard(index: number) {
+    if (confirm('この報酬月額を削除してもよろしいですか？')) {
+      const updatedList = this.salaryStandardList.filter((_, i) => i !== index);
+      this.updateSalaryStandardPeriods(updatedList);
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * 報酬月額の期間を自動更新（開始年月が新しい方の終了月を前の基準の終了月に設定）
+   */
+  private updateSalaryStandardPeriods(list: SalaryStandardView[]) {
+    const sorted = [...list].sort((a, b) => {
+      const aYM = Number(a.effectiveStartYear) * 100 + Number(a.effectiveStartMonth);
+      const bYM = Number(b.effectiveStartYear) * 100 + Number(b.effectiveStartMonth);
+      return bYM - aYM;
+    });
+
+    const updatedViews = sorted.map(item => this.toSalaryStandardView(item));
+    this.salaryStandardList = updatedViews;
+    this.salaryStandardsChange.emit(updatedViews);
+  }
+
+  /**
+   * SalaryStandard を SalaryStandardView に変換
+   */
+  private toSalaryStandardView(salary: SalaryStandard): SalaryStandardView {
+    let effectivePeriod = `${salary.effectiveStartYear}/${String(salary.effectiveStartMonth).padStart(2, '0')}`;
+    if (salary.effectiveEndYear && salary.effectiveEndMonth) {
+      effectivePeriod += ` ~ ${salary.effectiveEndYear}/${String(salary.effectiveEndMonth).padStart(2, '0')}`;
+    } else {
+      effectivePeriod += ' ~';
+    }
+
+    const monthlyAmountDisplay = `${(salary.monthlyAmount ?? 0).toLocaleString('ja-JP')} 円`;
+
+    return {
+      ...salary,
+      effectivePeriod,
+      monthlyAmountDisplay
+    };
+  }
+
+  /**
+   * ======================================================================
    * 賞与額支給実績の管理
    * ======================================================================
    */
@@ -333,8 +301,8 @@ export class EditEmployeeStep2Component implements OnChanges {
   /**
    * 賞与履歴編集モーダルを開く（新規追加または編集）
    */
-  openBonusHistoryModal(record?: BonusHistory | BonusHistoryView) {
-    this.selectedBonusHistory = record ? ({ ...record } as BonusHistory) : null;
+  openBonusHistoryModal(record?: BonusHistoryView) {
+    this.selectedBonusHistory = record ? { ...record } : null;
     this.isBonusHistoryModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -428,7 +396,7 @@ export class EditEmployeeStep2Component implements OnChanges {
    */
   private toBonusHistoryView(bonus: BonusHistory): BonusHistoryView {
     const paymentPeriod = `${bonus.paymentYear}/${String(bonus.paymentMonth).padStart(2, '0')}`;
-    const actualPaymentAmountDisplay = `${bonus.actualPaymentAmount.toLocaleString('ja-JP')} 円`;
+    const actualPaymentAmountDisplay = `${(bonus.actualPaymentAmount ?? 0).toLocaleString('ja-JP')} 円`;
     const healthStandardBonusAmountDisplay = `${(bonus.healthStandardBonusAmount ?? bonus.standardBonusAmount ?? 0).toLocaleString('ja-JP')} 円`;
     const pensionStandardBonusAmountDisplay = `${(bonus.pensionStandardBonusAmount ?? bonus.standardBonusAmount ?? 0).toLocaleString('ja-JP')} 円`;
   
@@ -629,20 +597,6 @@ export class EditEmployeeStep2Component implements OnChanges {
       `（適用期間: ${period.startYear}/${String(period.startMonth).padStart(2, '0')} 〜 ` +
       `${period.endYear}/${String(period.endMonth).padStart(2, '0')} / ${result.calculatedGradeDisplay}）`
     );
-  }
-
-  /**
-   * 定時決定シミュレーターが閉じられた
-   */
-  onRegularDecisionClosed() {
-    // 必要に応じて処理
-  }
-
-  /**
-   * 随時改定シミュレーターが閉じられた
-   */
-  onVarChangedDecisionClosed() {
-    // 必要に応じて処理
   }
 }
 

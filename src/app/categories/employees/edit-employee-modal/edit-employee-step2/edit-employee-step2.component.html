@@ -28,7 +28,7 @@
             <th class="col-actions">操作</th>
           </tr>
         </thead>
-        <tbody *ngIf="insuranceStandardList.length > 0">
+        <tbody>
           <tr *ngFor="let record of insuranceStandardList; let i = index">
             <td class="col-period">{{ record.effectivePeriod }}</td>
             <td class="col-standard">{{ record.insuranceRateMasterName }}</td>
@@ -40,7 +40,7 @@
                 </button>
                 <span class="action-divider">|</span>
                 <button type="button" class="btn-action delete" (click)="deleteInsuranceStandard(i)"
-                [disabled]="isHireDateRecord(record)" title="削除">
+                  [disabled]="isHireDateRecord(record)" title="削除">
                   削除
                 </button>
               </div>
@@ -108,14 +108,12 @@
     <div class="simulators-wrapper">
       <!-- 定時決定判定シミュレーター -->
       <app-salary-simulator-regular #regularSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
-        [retirementDate]="retirementDate" (applied)="onRegularDecisionApplied($event)"
-        (closed)="onRegularDecisionClosed()">
+        [retirementDate]="retirementDate" (applied)="onRegularDecisionApplied($event)">
       </app-salary-simulator-regular>
 
       <!-- 随時改定判定シミュレーター -->
       <app-salary-simulator-changed #varChangedSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
-        [retirementDate]="retirementDate" (applied)="onVarChangedDecisionApplied($event)"
-        (closed)="onVarChangedDecisionClosed()">
+        [retirementDate]="retirementDate" (applied)="onVarChangedDecisionApplied($event)">
       </app-salary-simulator-changed>
     </div>
   </section>

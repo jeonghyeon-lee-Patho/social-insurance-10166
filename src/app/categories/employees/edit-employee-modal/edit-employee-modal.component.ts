@@ -7,11 +7,13 @@ import { InsuranceStandardView } from '../../../models/insurance-standard.model'
 import { SalaryStandardView } from '../../../models/salary-standard.model';
 import { BonusHistoryView } from '../../../models/bonus-history.model';
 import { InsuranceRateMaster } from '../../../models/insurance-rate.model';
-import { calculateAge, checkDependentEligibility, checkSalaryHistoryGaps, getDaysList, getRelationshipLabel, katakanaValidator, kanjiValidator, romajiValidator, setControlSpecificError, toEmployeeView, resolveDateParts } from '../../../utils/employee.util';
+import {
+  calculateAge, checkDependentEligibility, checkSalaryHistoryGaps, getDaysList, getTodayString, getRelationshipLabel,
+  katakanaValidator, kanjiValidator, romajiValidator, resolveDateParts, employmentInsuranceValidator
+} from '../../../utils/employee.util';
 import { EditEmployeeStep2Component } from './edit-employee-step2/edit-employee-step2.component';
 import { calculateInsuranceEndYearMonth } from '../../../utils/insurance-calculator.util';
 import { EditEmployeeModalService } from './employee-modal.service';
-import { employmentInsuranceValidator } from '../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-employee-modal',
@@ -123,16 +125,14 @@ export class EditEmployeeModalComponent implements OnInit {
   /**
    * フォームコントロールへの日付値反映・バリデーション更新
    */
-  private updateFormControlDate(controlName: string, dateString: string, runValidation = false) {
+  private updateFormControlDate(controlName: string, dateString: string) {
     const control = this.form.get(controlName);
     control?.setValue(dateString);
     control?.markAsDirty();
     control?.markAsTouched();
 
-    if (runValidation) {
-      this.form.updateValueAndValidity();
-      this.cdr.detectChanges();
-    }
+    this.form.updateValueAndValidity();
+    this.cdr.detectChanges();
   }
 
   onBirthDatePartChange() {
@@ -159,7 +159,7 @@ export class EditEmployeeModalComponent implements OnInit {
     );
     this.retireDays = days;
     this.selectedRetireDay = correctedDay;
-    this.updateFormControlDate('retirementDate', dateString, true);
+    this.updateFormControlDate('retirementDate', dateString);
   }
 
   /**
@@ -167,62 +167,25 @@ export class EditEmployeeModalComponent implements OnInit {
    */
   private dateOrderValidator() {
     return (group: AbstractControl): ValidationErrors | null => {
-      const birthCtrl = group.get('dateOfBirth');
-      const hireCtrl = group.get('hireDate');
-      const retireCtrl = group.get('retirementDate');
+      const dateOfBirth = group.get('dateOfBirth')?.value;
+      const hireDate = group.get('hireDate')?.value;
+      const retirementDate = group.get('retirementDate')?.value;
 
-      const dateOfBirth = birthCtrl?.value;
-      const hireDate = hireCtrl?.value;
-      const retirementDate = retireCtrl?.value;
+      const todayStr = getTodayString();
+      const errors: ValidationErrors = {};
 
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      let errors: ValidationErrors = {};
-
-      // 生年月日が本日より未来かチェック
-      if (dateOfBirth) {
-        if (dateOfBirth > todayStr) {
-          errors['birthDateInFuture'] = true;
-          setControlSpecificError(birthCtrl, 'birthDateInFuture', true);
-        } else {
-          setControlSpecificError(birthCtrl, 'birthDateInFuture', false);
-        }
+      if (dateOfBirth && dateOfBirth > todayStr) {
+        errors['birthDateInFuture'] = true;
       }
 
-      // 入社日と生年月日の比較
-      if (dateOfBirth && hireDate) {
-        const birthDateVal = new Date(dateOfBirth + 'T00:00:00Z').getTime();
-        const hireDateVal = new Date(hireDate + 'T00:00:00Z').getTime();
-
-        if (!isNaN(birthDateVal) && !isNaN(hireDateVal)) {
-          if (birthDateVal >= hireDateVal) {
-            errors['hireDateBeforeBirth'] = true;
-            setControlSpecificError(hireCtrl, 'hireDateBeforeBirth', true);
-          } else {
-            setControlSpecificError(hireCtrl, 'hireDateBeforeBirth', false);
-          }
-        }
+      if (dateOfBirth && hireDate && dateOfBirth >= hireDate) {
+        errors['hireDateBeforeBirth'] = true;
       }
 
-      // 退職日と入社日の比較
-      if (hireDate && retirementDate) {
-        const hireDateVal = new Date(hireDate + 'T00:00:00Z').getTime();
-        const retireDateVal = new Date(retirementDate + 'T00:00:00Z').getTime();
-
-        if (!isNaN(hireDateVal) && !isNaN(retireDateVal)) {
-          if (hireDateVal > retireDateVal) {
-            errors['retirementDateBeforeHire'] = true;
-            setControlSpecificError(retireCtrl, 'retirementDateBeforeHire', true);
-          } else {
-            setControlSpecificError(retireCtrl, 'retirementDateBeforeHire', false);
-          }
-        }
-      } else if (!retirementDate) {
-        setControlSpecificError(retireCtrl, 'retirementDateBeforeHire', false);
+      if (hireDate && retirementDate && hireDate > retirementDate) {
+        errors['retirementDateBeforeHire'] = true;
       }
 
-      // 退社月設定制限
       if (retirementDate) {
         let maxHistoryYM = 0;
         for (const std of this.insuranceStandardList) {
@@ -247,13 +210,8 @@ export class EditEmployeeModalComponent implements OnInit {
           const endVal = endYM.year * 100 + endYM.month;
           if (endVal < maxHistoryYM) {
             errors['retirementBeforeHistory'] = true;
-            setControlSpecificError(retireCtrl, 'retirementBeforeHistory', true);
-          } else {
-            setControlSpecificError(retireCtrl, 'retirementBeforeHistory', false);
           }
         }
-      } else {
-        setControlSpecificError(retireCtrl, 'retirementBeforeHistory', false);
       }
 
       return Object.keys(errors).length > 0 ? errors : null;
@@ -406,7 +364,7 @@ export class EditEmployeeModalComponent implements OnInit {
       this.form.hasError('birthDateInFuture') ||
       this.form.hasError('hireDateBeforeBirth') ||
       this.form.hasError('retirementDateBeforeHire') ||
-      this.form.hasError('retirementBeforeHistory') 
+      this.form.hasError('retirementBeforeHistory')
     ) {
       return false;
     }
@@ -415,14 +373,12 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   sanitizeEmployeeIncome() {
-    if (this.employeeAnnualIncome < 0) {
-      this.employeeAnnualIncome = 0;
-    }
+    this.employeeAnnualIncome = Math.max(0, Math.floor(Number(this.employeeAnnualIncome) || 0));
   }
 
   sanitizeDepNumber(field: 'expectedAnnualIncome' | 'remittanceAmount') {
-    if (this.editingDependent && (this.editingDependent[field] ?? 0) < 0) {
-      this.editingDependent[field] = 0;
+    if (this.editingDependent) {
+      this.editingDependent[field] = Math.max(0, Math.floor(Number(this.editingDependent[field]) || 0));
     }
   }
 
@@ -458,6 +414,11 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   startEditDependent(dep: Dependent, index: number) {
+    if (this.isEditingDependent && this.editingIndex === index) {
+      this.cancelEditDependent();
+      return;
+    }
+
     this.editingIndex = index;
     this.editingDependent = { ...dep };
 
@@ -518,7 +479,7 @@ export class EditEmployeeModalComponent implements OnInit {
     this.editingDependent.name = name;
     this.editingDependent.dateOfBirth = birthDateStr;
     this.editingDependent.expectedAnnualIncome = Math.max(0, Number(this.editingDependent.expectedAnnualIncome) || 0);
-  
+
     if (this.editingDependent.isLivingTogether) {
       this.editingDependent.remittanceAmount = 0;
     } else {
@@ -779,22 +740,35 @@ export class EditEmployeeModalComponent implements OnInit {
   /* エラーメッセージを取得 */
   getErrorMessage(controlName: string): string {
     const control = this.form.get(controlName);
-    if (!control || !control.errors) return '';
+    const groupErrors = this.form.errors;
 
-    if (control.errors['required']) return '必須項目です';
-    if (control.errors['invalidKana']) return 'カタカナで入力してください';
-    if (control.errors['invalidKanji']) return '日本語文字（漢字・ひらがな・カタカナ）で入力してください';
-    if (control.errors['invalidRomaji']) return '半角英字とスペースのみ使用可能です';
-    if (control.errors['invalidEmploymentInsurance']) {
-      return '雇用保険番号は4桁-6桁-1桁（例: 1234-567890-1）または11桁で入力してください';
+    if (control && control.errors) {
+      if (control.errors['required']) return '必須項目です';
+      if (control.errors['invalidKana']) return 'カタカナで入力してください';
+      if (control.errors['invalidKanji']) return '日本語文字（漢字・ひらがな・カタカナ）で入力してください';
+      if (control.errors['invalidRomaji']) return '半角英字とスペースのみ使用可能です';
+      if (control.errors['invalidEmploymentInsurance']) {
+        return '雇用保険番号は4桁-6桁-1桁（例: 1234-567890-1）または11桁で入力してください';
+      }
     }
-    if (control.errors['birthDateInFuture']) return '生年月日は本日以前の日付を指定してください';
-    if (control.errors['hireDateBeforeBirth']) return '入社年月日は生年月日より後の日付にしてください';
-    if (control.errors['retirementDateBeforeHire']) return '退職年月日は入社年月日以降の日付にしてください';
-    if (control.errors['retirementBeforeHistory']) {
-      return '退職年月日は既存の履歴（保険・給与・賞与）の最新年月以降にしてください';
+
+    if (groupErrors) {
+      if (controlName === 'dateOfBirth' && groupErrors['birthDateInFuture']) {
+        return '生年月日は本日以前の日付を指定してください';
+      }
+      if (controlName === 'hireDate' && groupErrors['hireDateBeforeBirth']) {
+        return '入社年月日は生年月日より後の日付にしてください';
+      }
+      if (controlName === 'retirementDate') {
+        if (groupErrors['retirementDateBeforeHire']) {
+          return '退職年月日は入社年月日以降の日付にしてください';
+        }
+        if (groupErrors['retirementBeforeHistory']) {
+          return '退職年月日は既存の履歴（保険・給与・賞与）の最新年月以降にしてください';
+        }
+      }
     }
-    return '入力値が無効です';
+    return control?.invalid ? '入力値が無効です' : '';
   }
 
   getDisplayNameForModal(): string {

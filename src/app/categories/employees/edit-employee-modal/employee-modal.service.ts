@@ -232,7 +232,6 @@ export class EditEmployeeModalService {
       employeeAnnualIncome,
       hasIneligibleDependent,
       dependents,
-      salaryHistories: selectedEmployee?.salaryHistories || [],
       hasPreviousInsurance,
       previousInsuranceAmount: hasPreviousInsurance ? (Number(previousInsuranceAmount) || 0) : 0,
       createdAt: selectedEmployee?.createdAt || now,

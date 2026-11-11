@@ -304,18 +304,6 @@ export function employmentInsuranceValidator(control: AbstractControl): Validati
   return regex.test(value) ? null : { invalidEmploymentInsurance: true };
 }
 
-export function setControlSpecificError(control: AbstractControl | null, errorKey: string, hasError: boolean) {
-  if (!control) return;
-  const currentErrors = control.errors ? { ...control.errors } : null;
-
-  if (hasError) {
-    control.setErrors({ ...currentErrors, [errorKey]: true });
-  } else if (currentErrors && currentErrors[errorKey]) {
-    delete currentErrors[errorKey];
-    control.setErrors(Object.keys(currentErrors).length > 0 ? currentErrors : null);
-  }
-}
-
 /**
  * 3連セレクトボックス（年・月・日）の変更を共通処理するヘルパー
  */
