@@ -1,14 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  OnInit,
-  OnChanges,
-  SimpleChanges,
-  inject,
-  ChangeDetectorRef
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BonusHistory, BonusHistoryView } from '../../../../models/bonus-history.model';
@@ -21,8 +11,7 @@ import { BonusHistory, BonusHistoryView } from '../../../../models/bonus-history
   templateUrl: './edit-bonus-history-modal.component.html',
   styleUrl: './edit-bonus-history-modal.component.css'
 })
-export class EditBonusHistoryModalComponent implements OnInit, OnChanges {
-  @Input() isOpen = false;
+export class EditBonusHistoryModalComponent implements OnInit {
   @Input() selectedRecord: BonusHistory | null = null;
   @Input() hireDate: string = '';
   @Input() retirementDate: string = '';
@@ -71,12 +60,6 @@ export class EditBonusHistoryModalComponent implements OnInit, OnChanges {
 
   ngOnInit() {
     this.initializeForm();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['isOpen'] && this.isOpen) {
-      this.initializeForm();
-    }
   }
 
   private initializeForm() {
@@ -382,7 +365,6 @@ export class EditBonusHistoryModalComponent implements OnInit, OnChanges {
   }
 
   onCancel() {
-    this.errors = [];
     this.onClose.emit();
   }
 }

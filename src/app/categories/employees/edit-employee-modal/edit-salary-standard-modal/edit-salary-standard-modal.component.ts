@@ -1,14 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  OnInit,
-  OnChanges,
-  SimpleChanges,
-  inject,
-  ChangeDetectorRef
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SalaryStandard, SalaryStandardView } from '../../../../models/salary-standard.model';
@@ -22,8 +12,7 @@ import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calc
   templateUrl: './edit-salary-standard-modal.component.html',
   styleUrl: './edit-salary-standard-modal.component.css'
 })
-export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
-  @Input() isOpen = false;
+export class EditSalaryStandardModalComponent implements OnInit {
   @Input() selectedRecord: SalaryStandard | null = null;
   @Input() hireDate: string = '';                    // 入社日（YYYY-MM-DD）
   @Input() retirementDate: string = '';             // 退職日（YYYY-MM-DD）
@@ -56,18 +45,12 @@ export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
     this.initializeForm();
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['isOpen'] && this.isOpen) {
-      this.initializeForm();
-    }
-  }
-
   /**
    * フォームを初期化
    */
   private initializeForm() {
     this.errors = [];
-    
+
     if (this.selectedRecord) {
       // 編集時
       this.isEditing = true;
@@ -104,7 +87,7 @@ export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
    * 等級表示を更新
    */
   private updateGradeDisplay() {
-    if (this.monthlyAmount !== null && this.monthlyAmount !== undefined 
+    if (this.monthlyAmount !== null && this.monthlyAmount !== undefined
       && this.monthlyAmount > 0 && Number.isInteger(this.monthlyAmount)) {
       const gradeData = determineSalaryGrade(this.monthlyAmount);
       if (gradeData) {
@@ -151,24 +134,24 @@ export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
     if (sY && sM && eY && eM) {
       const startYM = sY * 100 + sM;
       const endYM = eY * 100 + eM;
-  
+
       if (endYM < startYM) {
         this.errors.push('適用終了年月は適用開始年月以降の日付を設定してください。');
       }
-  
+
       if (this.hireDate) {
         const [hY, hM] = this.hireDate.split('-').map(Number);
         if (startYM < (hY * 100 + hM)) {
           this.errors.push(`適用開始年月は入社年月（${hY}年${hM}月）以降で設定してください。`);
         }
       }
-  
+
       if (this.retirementDate && (startYM || endYM)) {
         const maxValid = calculateInsuranceEndYearMonth(this.retirementDate, this.hireDate);
-      
+
         if (maxValid) {
           const maxValidYM = maxValid.year * 100 + maxValid.month;
-      
+
           if (endYM && endYM > maxValidYM) {
             this.errors.push(`適用終了年月は資格喪失に伴う最終適用年月（${maxValid.year}年${maxValid.month}月）以前で設定してください。`);
           }
@@ -219,9 +202,6 @@ export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
     }
   }
 
-  /**
-   * 保存
-   */
   onSaveClick() {
     if (!this.validate()) {
       this.cdr.detectChanges();
@@ -251,16 +231,11 @@ export class EditSalaryStandardModalComponent implements OnInit, OnChanges {
       organizationId: this.selectedRecord?.organizationId || '',
       isActive: this.selectedRecord?.isActive ?? true
     };
-  
+
     this.onSave.emit(record);
   }
 
-  /**
-   * キャンセル
-   */
   onCancel() {
-    this.errors = [];
     this.onClose.emit();
   }
-
 }

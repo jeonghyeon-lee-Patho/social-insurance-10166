@@ -200,19 +200,19 @@
 </div>
 
 <!-- 社会保険適用基準編集モーダル（サブモーダル） -->
-<app-edit-insurance-standard-modal [isOpen]="isInsuranceStandardModalOpen" [selectedRecord]="selectedInsuranceStandard"
+<app-edit-insurance-standard-modal *ngIf="isInsuranceStandardModalOpen" [selectedRecord]="selectedInsuranceStandard"
   [isFirstRecord]="isEditingFirstRecord" [hireDate]="hireDate" [retirementDate]="retirementDate"
   [insuranceRateMasters]="insuranceRateMasters" [existingRecords]="insuranceStandardList"
   (onClose)="closeInsuranceStandardModal()"
   (onSave)="saveInsuranceStandard($event)"></app-edit-insurance-standard-modal>
 
 <!-- 報酬月額編集モーダル（サブモーダル） -->
-<app-edit-salary-standard-modal [isOpen]="isSalaryStandardModalOpen" [selectedRecord]="selectedSalaryStandard"
+<app-edit-salary-standard-modal *ngIf="isSalaryStandardModalOpen" [selectedRecord]="selectedSalaryStandard"
   [hireDate]="hireDate" [retirementDate]="retirementDate" [existingRecords]="salaryStandardList"
   (onClose)="closeSalaryStandardModal()" (onSave)="saveSalaryStandard($event)"></app-edit-salary-standard-modal>
 
 <!-- 賞与額支給実績編集モーダル（サブモーダル） -->
-<app-edit-bonus-history-modal [isOpen]="isBonusHistoryModalOpen" [selectedRecord]="selectedBonusHistory"
+<app-edit-bonus-history-modal *ngIf="isBonusHistoryModalOpen" [selectedRecord]="selectedBonusHistory"
   [hireDate]="hireDate" [retirementDate]="retirementDate" [existingRecords]="bonusHistoryList"
   [previousInsuranceAmount]="previousInsuranceAmount || 0" (onClose)="closeBonusHistoryModal()"
   (onSave)="saveBonusHistory($event)"></app-edit-bonus-history-modal>

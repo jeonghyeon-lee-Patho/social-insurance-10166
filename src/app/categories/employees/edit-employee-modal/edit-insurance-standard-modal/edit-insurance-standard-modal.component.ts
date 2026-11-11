@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { InsuranceStandard, InsuranceExceptionType, ForeignAgreementSettings } from '../../../../models/insurance-standard.model';
@@ -11,8 +11,7 @@ import { InsuranceRateMaster } from '../../../../models/insurance-rate.model';
   templateUrl: './edit-insurance-standard-modal.component.html',
   styleUrl: './edit-insurance-standard-modal.component.css'
 })
-export class EditInsuranceStandardModalComponent implements OnChanges {
-  @Input() isOpen = false;
+export class EditInsuranceStandardModalComponent implements OnInit {
   @Input() selectedRecord: InsuranceStandard | null = null;
   @Input() isFirstRecord: boolean = false;
   @Input() hireDate: string = '';           // 親コンポーネントから入社日
@@ -47,26 +46,18 @@ export class EditInsuranceStandardModalComponent implements OnChanges {
       healthExempt: [false],
       careExempt: [false]
     });
-
-    // 現在から将来の年を選択可能
-    const currentYear = new Date().getFullYear();
-    for (let y = currentYear + 10; y >= currentYear - 10; y--) {
-      this.applicableYears.push(y);
-    }
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (this.isOpen) {
-      this.generateApplicableYears();
+  ngOnInit() {
+    this.generateApplicableYears();
 
-      if (this.selectedRecord) {
-        this.loadExistingRecord();
-      } else {
-        this.resetForm();
-      }
-
-      this.updateStartMonthLock();
+    if (this.selectedRecord) {
+      this.loadExistingRecord();
+    } else {
+      this.resetForm();
     }
+
+    this.updateStartMonthLock();
   }
 
   private generateApplicableYears() {
@@ -391,17 +382,7 @@ export class EditInsuranceStandardModalComponent implements OnChanges {
     return labels[type] || '不明';
   }
 
-  /**
-   * モーダルを閉じる
-   */
-  close() {
-    this.onClose.emit();
-  }
-
-  /**
-   * キャンセル（アラートなし）
-   */
   cancel() {
-    this.close();
+    this.onClose.emit();
   }
 }

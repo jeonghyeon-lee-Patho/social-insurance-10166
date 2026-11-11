@@ -82,6 +82,6 @@
 </div>
 
 <!-- 編集モーダル -->
-<app-edit-insurance-rate-modal [isOpen]="showEditModal" [selectedRate]="selectedRate" [currentUser]="currentUser"
+<app-edit-insurance-rate-modal *ngIf="showEditModal" [selectedRate]="selectedRate" [currentUser]="currentUser"
   [existingRates]="insuranceRates" (onClose)="closeEditModal()" (onSave)="onRateSaved()">
 </app-edit-insurance-rate-modal>

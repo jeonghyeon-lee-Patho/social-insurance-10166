@@ -266,7 +266,6 @@ export function formatDate(dateString: string): string {
   return `${y}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
 }
 
-
 export function getDaysList(year: number | '', month: number | '', fallbackYear: number = new Date().getFullYear()): number[] {
   const y = Number(year) || fallbackYear;
   const m = Number(month) || 1;

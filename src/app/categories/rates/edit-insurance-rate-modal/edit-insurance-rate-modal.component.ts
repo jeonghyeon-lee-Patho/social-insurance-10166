@@ -19,8 +19,7 @@ import {
   templateUrl: './edit-insurance-rate-modal.component.html',
   styleUrl: './edit-insurance-rate-modal.component.css'
 })
-export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
-  @Input() isOpen = false;
+export class EditInsuranceRateModalComponent implements OnInit {
   @Input() selectedRate: InsuranceRateMaster | null = null;
   @Input() currentUser: User | null = null;
   @Input() existingRates: InsuranceRateMaster[] = [];
@@ -88,22 +87,10 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
 
   ngOnInit() {
     this.setupFormListeners();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['isOpen'] && !this.isOpen) {
-      this.resetForm();
-      return;
-    }
-
-    if (this.isOpen) {
-      if (changes['isOpen']?.currentValue || changes['selectedRate']) {
-        if (this.selectedRate) {
-          this.loadExistingRate();
-        } else {
-          this.resetForm();
-        }
-      }
+    if (this.selectedRate) {
+      this.loadExistingRate();
+    } else {
+      this.onInsuranceTypeChange(InsuranceType.KYOKAI, false);
     }
   }
 
@@ -200,19 +187,6 @@ export class EditInsuranceRateModalComponent implements OnInit, OnChanges {
       careEmployerPercentage: careEmplrRatio
     }, { emitEvent: false });
 
-    this.cdr.detectChanges();
-  }
-
-  private resetForm() {
-    this.prefectures = [];
-    this.form.reset({
-      name: '',
-      type: InsuranceType.KYOKAI,
-      ...this.defaultKyokaiValues
-    }, { emitEvent: false });
-
-    this.onInsuranceTypeChange(InsuranceType.KYOKAI, false);
-    this.form.get('prefecture')?.disable({ emitEvent: false });
     this.cdr.detectChanges();
   }
 
