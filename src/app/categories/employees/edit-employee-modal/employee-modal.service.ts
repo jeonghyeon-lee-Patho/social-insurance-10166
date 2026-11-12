@@ -5,7 +5,7 @@ import { InsuranceStandardView, InsuranceExceptionType, InsuranceStandard } from
 import { SalaryStandard, SalaryStandardView } from '../../../models/salary-standard.model';
 import { BonusHistory, BonusHistoryView } from '../../../models/bonus-history.model';
 import { InsuranceRateMaster } from '../../../models/insurance-rate.model';
-import { calculateInsuranceEndYearMonth } from '../../../utils/insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from '../../../utils/employee.util';
 import { toEmployeeView } from '../../../utils/employee.util';
 
 export interface SaveEmployeePayload {

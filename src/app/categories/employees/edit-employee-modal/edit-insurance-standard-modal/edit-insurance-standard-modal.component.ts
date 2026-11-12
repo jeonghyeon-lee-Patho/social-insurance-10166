@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { InsuranceStandard, InsuranceExceptionType, ForeignAgreementSettings } from '../../../../models/insurance-standard.model';
 import { InsuranceRateMaster } from '../../../../models/insurance-rate.model';
-import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from '../../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-insurance-standard-modal',
@@ -157,7 +157,7 @@ export class EditInsuranceStandardModalComponent implements OnInit {
   /**
    * 保存してモーダルを閉じる
    */
-  async save() {
+  save() {
     if (this.form.invalid) {
       Object.keys(this.form.controls).forEach(key => {
         this.form.get(key)?.markAsTouched();
@@ -197,7 +197,7 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     }
 
     const insuranceStandard: InsuranceStandard = {
-      id: this.selectedRecord?.id || '',
+      id: this.selectedRecord?.id || `insurance_${Date.now()}`,
       employeeId: this.selectedRecord?.employeeId || '',
       effectiveStartYear: Number(formValue.effectiveStartYear),
       effectiveStartMonth: Number(formValue.effectiveStartMonth),
@@ -284,7 +284,7 @@ export class EditInsuranceStandardModalComponent implements OnInit {
       }
     } else {
       const isDuplicate = this.existingRecords.some(
-        record => record.effectiveStartYear === year && record.effectiveStartMonth === month
+        record => Number(record.effectiveStartYear) === year && Number(record.effectiveStartMonth) === month
       );
       if (isDuplicate) {
         alert(`指定された適用開始年月（${year}/${String(month).padStart(2, '0')}）の履歴はすでに登録されています。`);

@@ -241,8 +241,8 @@
 .grade-display {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 8px;
   background-color: #f0f9ff;
   border-left: 3px solid #2563eb;
   border-radius: 4px;

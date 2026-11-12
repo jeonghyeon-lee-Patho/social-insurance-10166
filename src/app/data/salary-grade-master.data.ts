@@ -5,7 +5,7 @@
  */
 
 export interface SalaryGradeMaster {
-  grade: number;               // 等級番号（1～51）
+  grade: number;               // 等級番号（0～51）
   displayName: string;         // 表示名（例: "22(19)等級"）
   minimumSalary: number;       // 等級の下限額（円）
   maximumSalary?: number | null;  // 等級の上限額（円）※最高等級はnull
@@ -80,7 +80,6 @@ export function determineSalaryGrade(monthlyAmount: number): SalaryGradeMaster {
 
   for (const grade of SALARY_GRADE_MASTER) {
     if (grade.maximumSalary === null || grade.maximumSalary === undefined) {
-      // 最高等級：上限がないのでこれ以上ならこの等級
       if (monthlyAmount >= grade.minimumSalary) {
         return grade;
       }

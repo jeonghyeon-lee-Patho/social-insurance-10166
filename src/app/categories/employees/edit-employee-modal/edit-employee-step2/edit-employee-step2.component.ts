@@ -11,7 +11,7 @@ import { EditBonusHistoryModalComponent } from '../edit-bonus-history-modal/edit
 import { SalarySimulatorRegularComponent } from '../salary-simulator-regular/salary-simulator-regular.component';
 import { SalarySimulatorChangedComponent } from '../salary-simulator-changed/salary-simulator-changed.component';
 import { RegularDecisionResult, VarChangedDecisionResult, getVarChangedApplicationPeriod } from '../../../../utils/salary-simulator.util';
-import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from '../../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-employee-step2',

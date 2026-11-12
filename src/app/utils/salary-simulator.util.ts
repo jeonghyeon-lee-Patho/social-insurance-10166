@@ -4,7 +4,7 @@
  */
 
 import { SALARY_GRADE_MASTER } from '../data/salary-grade-master.data';
-import { calculateInsuranceEndYearMonth } from './insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from './employee.util';
 
 /**
  * 定時決定シミュレーション結果

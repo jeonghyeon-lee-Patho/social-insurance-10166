@@ -4,7 +4,7 @@
     <!-- ヘッダー -->
     <div class="modal-header">
       <h2 class="modal-title">
-        {{ isEditing ? '標準報酬月額を編集' : '標準報酬月額を追加' }}
+        {{ selectedRecord ? '標準報酬月額を編集' : '標準報酬月額を追加' }}
       </h2>
       <button type="button" class="modal-close-btn" (click)="onCancel()" title="閉じる">
         ✕
@@ -73,8 +73,11 @@
           <label class="form-label">標準報酬等級</label>
           <div class="grade-display">
             <span class="grade-badge">{{ calculatedGradeDisplay }}</span>
-            <span class="grade-note">
-              （標準報酬月額 {{ calculatedStandardAmount | number:'1.0-0' }} 円に対応）
+            <span class="grade-note" *ngIf="calculatedStandardAmount !== null">
+              （標準報酬月額 {{ calculatedStandardAmount | number:'1.0-0' }} 円
+              <ng-container *ngIf="calculatedStandardAmount < 88000">／厚生年金は 88,000 円</ng-container>
+              <ng-container *ngIf="calculatedStandardAmount > 650000">／厚生年金は 650,000 円</ng-container>
+              に対応）
             </span>
           </div>
         </div>
@@ -102,7 +105,7 @@
         キャンセル
       </button>
       <button type="button" class="btn btn-primary" (click)="onSaveClick()">
-        {{ isEditing ? '更新' : '追加' }}
+        保存
       </button>
     </div>
   </div>

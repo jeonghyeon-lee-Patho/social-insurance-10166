@@ -1,22 +1,22 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { SalaryStandard, SalaryStandardView } from '../../../../models/salary-standard.model';
 import { determineSalaryGrade, getSalaryGradeByNumber } from '../../../../data/salary-grade-master.data';
-import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from '../../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-salary-standard-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './edit-salary-standard-modal.component.html',
   styleUrl: './edit-salary-standard-modal.component.css'
 })
 export class EditSalaryStandardModalComponent implements OnInit {
   @Input() selectedRecord: SalaryStandard | null = null;
-  @Input() hireDate: string = '';                    // 入社日（YYYY-MM-DD）
-  @Input() retirementDate: string = '';             // 退職日（YYYY-MM-DD）
-  @Input() existingRecords: SalaryStandardView[] = []; // 既存の履歴（期間重複チェック用）
+  @Input() hireDate: string = '';
+  @Input() retirementDate: string = '';
+  @Input() existingRecords: SalaryStandardView[] = [];
 
   @Output() onClose = new EventEmitter<void>();
   @Output() onSave = new EventEmitter<SalaryStandard>();
@@ -32,64 +32,32 @@ export class EditSalaryStandardModalComponent implements OnInit {
   calculatedGradeDisplay = '';
   calculatedGradeNumber = 0;
   calculatedStandardAmount: number | null = null;
-
-  // バリデーションエラー
   errors: string[] = [];
-
-  // 判定用フラグ
-  isEditing = false;
 
   private cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
-    this.initializeForm();
-  }
-
-  /**
-   * フォームを初期化
-   */
-  private initializeForm() {
-    this.errors = [];
-
     if (this.selectedRecord) {
-      // 編集時
-      this.isEditing = true;
       this.startYear = this.selectedRecord.effectiveStartYear;
       this.startMonth = this.selectedRecord.effectiveStartMonth;
       this.endYear = this.selectedRecord.effectiveEndYear || null;
       this.endMonth = this.selectedRecord.effectiveEndMonth || null;
       this.monthlyAmount = this.selectedRecord.monthlyAmount ?? 0;
       this.updateGradeDisplay();
-    } else {
-      // 新規追加時：入社年月をデフォルト
-      this.isEditing = false;
-      this.startYear = null;
-      this.startMonth = null;
-      this.endYear = null;
-      this.endMonth = null;
-      this.monthlyAmount = null;
-      this.calculatedGradeDisplay = '';
-      this.calculatedGradeNumber = 0;
-      this.calculatedStandardAmount = null;
-      this.updateGradeDisplay();
+      this.cdr.detectChanges();
     }
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * 月額を入力した際に等級を自動計算
-   */
-  onMonthlyAmountChange() {
-    this.updateGradeDisplay();
   }
 
   /**
    * 等級表示を更新
    */
   private updateGradeDisplay() {
-    if (this.monthlyAmount !== null && this.monthlyAmount !== undefined
-      && this.monthlyAmount > 0 && Number.isInteger(this.monthlyAmount)) {
-      const gradeData = determineSalaryGrade(this.monthlyAmount);
+    const amount = this.monthlyAmount !== null && this.monthlyAmount !== undefined
+      ? Number(this.monthlyAmount)
+      : NaN;
+
+    if (Number.isInteger(amount) && amount > 0) {
+      const gradeData = determineSalaryGrade(amount);
       if (gradeData) {
         this.calculatedGradeNumber = gradeData.grade;
         this.calculatedGradeDisplay = gradeData.displayName;
@@ -100,6 +68,13 @@ export class EditSalaryStandardModalComponent implements OnInit {
       this.calculatedGradeNumber = 0;
       this.calculatedStandardAmount = null;
     }
+  }
+
+  /**
+   * 月額を入力した際に等級を自動計算
+   */
+  onMonthlyAmountChange() {
+    this.updateGradeDisplay();
   }
 
   /**
@@ -146,15 +121,10 @@ export class EditSalaryStandardModalComponent implements OnInit {
         }
       }
 
-      if (this.retirementDate && (startYM || endYM)) {
+      if (this.retirementDate) {
         const maxValid = calculateInsuranceEndYearMonth(this.retirementDate, this.hireDate);
-
-        if (maxValid) {
-          const maxValidYM = maxValid.year * 100 + maxValid.month;
-
-          if (endYM && endYM > maxValidYM) {
-            this.errors.push(`適用終了年月は資格喪失に伴う最終適用年月（${maxValid.year}年${maxValid.month}月）以前で設定してください。`);
-          }
+        if (maxValid && endYM > (maxValid.year * 100 + maxValid.month)) {
+          this.errors.push(`適用終了年月は資格喪失に伴う最終適用年月（${maxValid.year}年${maxValid.month}月）以前で設定してください。`);
         }
       }
     }
@@ -184,19 +154,10 @@ export class EditSalaryStandardModalComponent implements OnInit {
       const existStartYM = Number(record.effectiveStartYear) * 100 + Number(record.effectiveStartMonth);
       const existEndYM = record.effectiveEndYear && record.effectiveEndMonth
         ? Number(record.effectiveEndYear) * 100 + Number(record.effectiveEndMonth)
-        : null;
+        : 999999;
 
-      let overlaps = false;
-      if (existEndYM === null) {
-        overlaps = newEndYM >= existStartYM;
-      } else {
-        overlaps = !(newEndYM < existStartYM || newStartYM > existEndYM);
-      }
-
-      if (overlaps) {
-        this.errors.push(
-          `適用期間が既存の履歴（${record.effectivePeriod}）と重複しています。`
-        );
+      if (newStartYM <= existEndYM && newEndYM >= existStartYM) {
+        this.errors.push(`適用期間が既存の履歴（${record.effectivePeriod}）と重複しています。`);
         break;
       }
     }
@@ -211,6 +172,7 @@ export class EditSalaryStandardModalComponent implements OnInit {
     const gradeData = getSalaryGradeByNumber(this.calculatedGradeNumber);
     if (!gradeData) {
       this.errors.push('等級の取得に失敗しました。');
+      this.cdr.detectChanges();
       return;
     }
 

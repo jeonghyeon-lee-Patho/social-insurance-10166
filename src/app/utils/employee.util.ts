@@ -1,5 +1,4 @@
 import { Employee, EmployeeView, Dependent, DependentRelationship } from '../models/employee.model';
-import { calculateInsuranceEndYearMonth } from './insurance-calculator.util';
 import { AbstractControl, ValidationErrors } from '@angular/forms';
 
 /**
@@ -323,5 +322,37 @@ export function resolveDateParts(
     : '';
 
   return { days, correctedDay, dateString };
+}
+
+/**
+ * 退職日に基づく最終被保険者年月（保険料賦課の最終月）を計算
+ * ・月末退職：退職当月まで賦課（翌月1日資格喪失）
+ * ・月中退職：退職前月まで賦課（当月中資格喪失のため当月免除）
+ */
+export function calculateInsuranceEndYearMonth(retirementDateStr?: string, hireDateStr?: string): { year: number; month: number; } | null {
+  if (!retirementDateStr) return null;
+  const [retireY, retireM, retireD] = retirementDateStr.split('-').map(Number);
+  if (!retireY || !retireM || !retireD) return null;
+
+  if (hireDateStr) {
+    const [hireY, hireM] = hireDateStr.split('-').map(Number);
+    if (hireY === retireY && hireM === retireM) {
+      return { year: retireY, month: retireM };
+    }
+  }
+
+  const lastDayOfMonth = new Date(retireY, retireM, 0).getDate();
+
+  if (retireD === lastDayOfMonth) {
+    return { year: retireY, month: retireM };
+  } else {
+    let endMonth = retireM - 1;
+    let endYear = retireY;
+    if (endMonth === 0) {
+      endMonth = 12;
+      endYear -= 1;
+    }
+    return { year: endYear, month: endMonth };
+  }
 }
 

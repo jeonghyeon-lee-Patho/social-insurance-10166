@@ -12,7 +12,7 @@ import {
   katakanaValidator, kanjiValidator, romajiValidator, resolveDateParts, employmentInsuranceValidator
 } from '../../../utils/employee.util';
 import { EditEmployeeStep2Component } from './edit-employee-step2/edit-employee-step2.component';
-import { calculateInsuranceEndYearMonth } from '../../../utils/insurance-calculator.util';
+import { calculateInsuranceEndYearMonth } from '../../../utils/employee.util';
 import { EditEmployeeModalService } from './employee-modal.service';
 
 @Component({

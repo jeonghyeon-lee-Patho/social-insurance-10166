@@ -3,7 +3,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h2 class="modal-title">
-        {{ isEditing ? '賞与額支給実績を編集' : '賞与額支給実績を追加' }}
+        {{ selectedRecord ? '賞与額支給実績を編集' : '賞与額支給実績を追加' }}
       </h2>
       <button type="button" class="modal-close-btn" (click)="onCancel()" title="閉じる">✕</button>
     </div>
@@ -53,9 +53,8 @@
         </label>
         <div class="form-control-wrapper">
           <div class="input-wrapper">
-            <input type="number" id="healthStandardBonusAmount" [(ngModel)]="healthStandardBonusAmount"
-              (input)="onStandardBonusAmountChange()" placeholder="0" min="0" step="1000"
-              class="form-control amount-input" />
+            <input type="number" id="healthStandardBonusAmount" [(ngModel)]="healthStandardBonusAmount" placeholder="0"
+              min="0" step="1000" class="form-control amount-input" />
             <span class="input-suffix">円</span>
           </div>
           <div class="form-hint" [class.warning]="healthInsuranceTotal + (healthStandardBonusAmount || 0) > 5730000">
@@ -80,8 +79,7 @@
         <div class="form-control-wrapper">
           <div class="input-wrapper">
             <input type="number" id="pensionStandardBonusAmount" [(ngModel)]="pensionStandardBonusAmount"
-              (input)="onStandardBonusAmountChange()" placeholder="0" min="0" step="1000"
-              class="form-control amount-input" />
+              placeholder="0" min="0" step="1000" class="form-control amount-input" />
             <span class="input-suffix">円</span>
           </div>
           <div class="form-hint" [class.warning]="(pensionStandardBonusAmount || 0) > 1500000">
@@ -102,6 +100,7 @@
           <li>
             <strong>端数・上限処理：</strong>
             実支給額の千円未満を切り捨て後、法定上限（健保・介護：年度累計573万円／厚年：1回150万円）が自動適用されます。手動調整時も必ず千円単位で入力してください。
+          </li>
           <li>
             <strong>二以上事業所勤務（兼業・副業）：</strong>
             他社支給分を含む累計上限は自動判定されません。年金事務所の決定通知書を確認し、確定額へ手動で補正してください。
@@ -115,7 +114,7 @@
         キャンセル
       </button>
       <button type="button" class="btn btn-primary" (click)="onSaveClick()">
-        {{ isEditing ? '更新' : '追加' }}
+        保存
       </button>
     </div>
   </div>
