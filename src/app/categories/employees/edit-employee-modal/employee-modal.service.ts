@@ -325,6 +325,7 @@ export class EditEmployeeModalService {
         insuranceRateMasterId: s.insuranceRateMasterId || 'N/A',
         insuranceRateMasterName: s.insuranceRateMasterName || '対象外',
         exceptionType: s.exceptionType || InsuranceExceptionType.NORMAL,
+        foreignAgreementSettings: s.foreignAgreementSettings || deleteField(),
         createdAt: s.createdAt || now,
         updatedAt: now,
         createdBy: s.createdBy || currentUserUid,

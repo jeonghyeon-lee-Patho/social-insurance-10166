@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { InsuranceStandard, InsuranceExceptionType, ForeignAgreementSettings } from '../../../../models/insurance-standard.model';
 import { InsuranceRateMaster } from '../../../../models/insurance-rate.model';
+import { calculateInsuranceEndYearMonth } from '../../../../utils/insurance-calculator.util';
 
 @Component({
   selector: 'app-edit-insurance-standard-modal',
@@ -23,12 +24,7 @@ export class EditInsuranceStandardModalComponent implements OnInit {
   @Output() onSave = new EventEmitter<InsuranceStandard>();
 
   form: FormGroup;
-  isSaving = false;
-
-  // 特例種別の列挙型
   exceptionTypes = InsuranceExceptionType;
-
-  // 年月選択用
   applicableYears: number[] = [];
   months = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -54,10 +50,11 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     if (this.selectedRecord) {
       this.loadExistingRecord();
     } else {
-      this.resetForm();
+      if (this.hireDate) {
+        const [y, m] = this.hireDate.split('-').map(Number);
+        this.form.patchValue({ effectiveStartYear: y, effectiveStartMonth: m });
+      }
     }
-
-    this.updateStartMonthLock();
   }
 
   private generateApplicableYears() {
@@ -80,15 +77,6 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     }
   }
 
-  get isForeignAgreementSelected(): boolean {
-    const val = this.form.get('exceptionType')?.value;
-    return (
-      val === this.exceptionTypes.FOREIGN_AGREEMENT_PENSION ||
-      val === this.exceptionTypes.FOREIGN_AGREEMENT_HEALTH ||
-      val === this.exceptionTypes.FOREIGN_AGREEMENT_BOTH
-    );
-  }
-
   /**
    * 既存レコードを読み込む
    */
@@ -100,61 +88,19 @@ export class EditInsuranceStandardModalComponent implements OnInit {
       this.selectedRecord.exceptionType === InsuranceExceptionType.FOREIGN_AGREEMENT_HEALTH ||
       this.selectedRecord.exceptionType === InsuranceExceptionType.FOREIGN_AGREEMENT_BOTH
     );
+    const settings = this.selectedRecord.foreignAgreementSettings;
 
     this.form.patchValue({
       effectiveStartYear: this.selectedRecord.effectiveStartYear,
       effectiveStartMonth: this.selectedRecord.effectiveStartMonth,
       insuranceRateMasterId: this.selectedRecord.insuranceRateMasterId,
-      exceptionType: isForeign ? InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION : this.selectedRecord.exceptionType
+      exceptionType: isForeign ? InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION : this.selectedRecord.exceptionType,
+      pensionExempt: !!settings?.pensionExempt,
+      healthExempt: !!settings?.healthExempt
     });
-
-    // 外国人協定免除設定
-    if (this.selectedRecord.foreignAgreementSettings) {
-      this.form.patchValue({
-        pensionExempt: !!this.selectedRecord.foreignAgreementSettings.pensionExempt,
-        healthExempt: !!this.selectedRecord.foreignAgreementSettings.healthExempt,
-        careExempt: !!this.selectedRecord.foreignAgreementSettings.careExempt
-      });
-    } else if (isForeign) {
-      this.form.patchValue({
-        pensionExempt: this.selectedRecord.exceptionType !== InsuranceExceptionType.FOREIGN_AGREEMENT_HEALTH,
-        healthExempt: this.selectedRecord.exceptionType !== InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION,
-        careExempt: false
-      });
-    }
 
     this.onExceptionTypeChange();
     this.updateStartMonthLock();
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * フォームをリセット
-   */
-  private resetForm() {
-    // 入社日から開始年月をセット
-    if (this.hireDate) {
-      const [y, m] = this.hireDate.split('-').map(Number);
-      this.form.patchValue({
-        effectiveStartYear: y,
-        effectiveStartMonth: m,
-        insuranceRateMasterId: '',
-        exceptionType: InsuranceExceptionType.NORMAL,
-        pensionExempt: false,
-        healthExempt: false,
-        careExempt: false
-      });
-    } else {
-      this.form.reset({
-        exceptionType: InsuranceExceptionType.NORMAL,
-        pensionExempt: false,
-        healthExempt: false,
-        careExempt: false
-      });
-    }
-
-    this.updateStartMonthLock();
-    this.cdr.detectChanges();
   }
 
   /**
@@ -172,6 +118,16 @@ export class EditInsuranceStandardModalComponent implements OnInit {
       startYearCtrl?.enable();
       startMonthCtrl?.enable();
     }
+    this.cdr.detectChanges();
+  }
+
+  get isForeignAgreementSelected(): boolean {
+    const val = this.form.get('exceptionType')?.value;
+    return (
+      val === this.exceptionTypes.FOREIGN_AGREEMENT_PENSION ||
+      val === this.exceptionTypes.FOREIGN_AGREEMENT_HEALTH ||
+      val === this.exceptionTypes.FOREIGN_AGREEMENT_BOTH
+    );
   }
 
   /**
@@ -180,12 +136,10 @@ export class EditInsuranceStandardModalComponent implements OnInit {
   onExceptionTypeChange() {
     const pensionCtrl = this.form.get('pensionExempt');
     const healthCtrl = this.form.get('healthExempt');
-    const careCtrl = this.form.get('careExempt');
 
     if (this.isForeignAgreementSelected) {
       pensionCtrl?.enable();
       healthCtrl?.enable();
-      careCtrl?.enable();
 
       if (!pensionCtrl?.value && !healthCtrl?.value) {
         pensionCtrl?.setValue(true);
@@ -193,10 +147,8 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     } else {
       pensionCtrl?.disable();
       healthCtrl?.disable();
-      careCtrl?.disable();
       pensionCtrl?.setValue(false);
       healthCtrl?.setValue(false);
-      careCtrl?.setValue(false);
     }
 
     this.cdr.detectChanges();
@@ -225,50 +177,44 @@ export class EditInsuranceStandardModalComponent implements OnInit {
       return;
     }
 
-    this.isSaving = true;
-    try {
-      let actualExceptionType = formValue.exceptionType;
-      let foreignAgreementSettings: ForeignAgreementSettings | undefined;
+    let actualExceptionType = formValue.exceptionType;
+    let foreignAgreementSettings: ForeignAgreementSettings | undefined;
 
-      if (this.isForeignAgreementSelected) {
-        foreignAgreementSettings = {
-          pensionExempt: !!formValue.pensionExempt,
-          healthExempt: !!formValue.healthExempt,
-          careExempt: !!formValue.healthExempt
-        };
-
-        if (formValue.pensionExempt && formValue.healthExempt) {
-          actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_BOTH;
-        } else if (formValue.pensionExempt) {
-          actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION;
-        } else if (formValue.healthExempt) {
-          actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_HEALTH;
-        }
-      }
-
-      const insuranceStandard: InsuranceStandard = {
-        id: this.selectedRecord?.id || '',
-        employeeId: this.selectedRecord?.employeeId || '',
-        effectiveStartYear: Number(formValue.effectiveStartYear),
-        effectiveStartMonth: Number(formValue.effectiveStartMonth),
-        effectiveEndYear: this.selectedRecord?.effectiveEndYear,
-        effectiveEndMonth: this.selectedRecord?.effectiveEndMonth,
-        insuranceRateMasterId: formValue.insuranceRateMasterId,
-        insuranceRateMasterName: this.getInsuranceRateMasterName(formValue.insuranceRateMasterId),
-        exceptionType: actualExceptionType,
-        foreignAgreementSettings,
-        createdAt: this.selectedRecord?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: this.selectedRecord?.createdBy || '',
-        organizationId: this.selectedRecord?.organizationId || '',
-        isActive: true
+    if (this.isForeignAgreementSelected) {
+      foreignAgreementSettings = {
+        pensionExempt: !!formValue.pensionExempt,
+        healthExempt: !!formValue.healthExempt,
+        careExempt: !!formValue.healthExempt
       };
 
-      this.onSave.emit(insuranceStandard);
-    } finally {
-      this.isSaving = false;
-      this.cdr.detectChanges();
+      if (formValue.pensionExempt && formValue.healthExempt) {
+        actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_BOTH;
+      } else if (formValue.pensionExempt) {
+        actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION;
+      } else if (formValue.healthExempt) {
+        actualExceptionType = InsuranceExceptionType.FOREIGN_AGREEMENT_HEALTH;
+      }
     }
+
+    const insuranceStandard: InsuranceStandard = {
+      id: this.selectedRecord?.id || '',
+      employeeId: this.selectedRecord?.employeeId || '',
+      effectiveStartYear: Number(formValue.effectiveStartYear),
+      effectiveStartMonth: Number(formValue.effectiveStartMonth),
+      effectiveEndYear: this.selectedRecord?.effectiveEndYear,
+      effectiveEndMonth: this.selectedRecord?.effectiveEndMonth,
+      insuranceRateMasterId: formValue.insuranceRateMasterId,
+      insuranceRateMasterName: this.getInsuranceRateMasterName(formValue.insuranceRateMasterId),
+      exceptionType: actualExceptionType,
+      foreignAgreementSettings,
+      createdAt: this.selectedRecord?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: this.selectedRecord?.createdBy || '',
+      organizationId: this.selectedRecord?.organizationId || '',
+      isActive: true
+    };
+
+    this.onSave.emit(insuranceStandard);
   }
 
   /**
@@ -296,21 +242,13 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     }
 
     if (this.retirementDate) {
-      const [rY, rM, rD] = this.retirementDate.split('-').map(Number);
-      const lastDay = new Date(rY, rM, 0).getDate();
-      let limitY = rY;
-      let limitM = rM;
-      if (rD !== lastDay) {
-        limitM = rM - 1;
-        if (limitM === 0) {
-          limitM = 12;
-          limitY -= 1;
+      const endYM = calculateInsuranceEndYearMonth(this.retirementDate, this.hireDate);
+      if (endYM) {
+        const limitYM = endYM.year * 100 + endYM.month;
+        if (startYM > limitYM) {
+          alert(`適用開始年月は社会保険の資格喪失前月（${endYM.year}/${String(endYM.month).padStart(2, '0')}）以前の日付を指定してください。`);
+          return false;
         }
-      }
-      const limitYM = limitY * 100 + limitM;
-      if (startYM > limitYM) {
-        alert(`適用開始年月は社会保険の資格喪失前月（${limitY}/${String(limitM).padStart(2, '0')}）以前の日付を指定してください。`);
-        return false;
       }
     }
 
@@ -366,20 +304,6 @@ export class EditInsuranceStandardModalComponent implements OnInit {
     }
     const master = this.insuranceRateMasters.find(m => m.id === masterId);
     return master?.name || '';
-  }
-
-  /**
-   * 特例タイプの日本語ラベルを取得
-   */
-  getExceptionTypeLabel(type: InsuranceExceptionType): string {
-    const labels: Record<InsuranceExceptionType, string> = {
-      [InsuranceExceptionType.NORMAL]: '通常',
-      [InsuranceExceptionType.FOREIGN_AGREEMENT_PENSION]: '外国人社会保障協定免除（年金）',
-      [InsuranceExceptionType.FOREIGN_AGREEMENT_HEALTH]: '外国人社会保障協定免除（医療）',
-      [InsuranceExceptionType.FOREIGN_AGREEMENT_BOTH]: '外国人社会保障協定免除（年金・医療）',
-      [InsuranceExceptionType.CHILDCARE_LEAVE_EXEMPTION]: '育児・産前産後休業免除'
-    };
-    return labels[type] || '不明';
   }
 
   cancel() {

@@ -28,7 +28,9 @@
               <option *ngFor="let m of months" [value]="m">{{ ('0' + m).slice(-2) }}</option>
             </select>
           </div>
-          <div *ngIf="form.get('effectiveStartYear')?.touched && form.get('effectiveStartYear')?.invalid"
+          <div *ngIf="(form.get('effectiveStartYear')?.touched || form.get('effectiveStartYear')?.dirty || 
+            form.get('effectiveStartMonth')?.touched || form.get('effectiveStartMonth')?.dirty) && 
+            (form.get('effectiveStartYear')?.invalid || form.get('effectiveStartMonth')?.invalid)"
             class="error-message">
             適用開始年月は必須です
           </div>
@@ -48,8 +50,8 @@
             </option>
             <option value="N/A">対象外</option>
           </select>
-          <div *ngIf="form.get('insuranceRateMasterId')?.touched && form.get('insuranceRateMasterId')?.invalid"
-            class="error-message">
+          <div *ngIf="(form.get('insuranceRateMasterId')?.touched || form.get('insuranceRateMasterId')?.dirty) && 
+            form.get('insuranceRateMasterId')?.invalid" class="error-message">
             適用基準は必須です
           </div>
         </div>
@@ -126,14 +128,12 @@
 
     <!-- モーダルフッター -->
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="cancel()" [disabled]="isSaving">
+      <button class="btn btn-secondary" (click)="cancel()">
         キャンセル
       </button>
-
       <div class="button-spacer"></div>
-
-      <button class="btn btn-success" (click)="save()" [disabled]="isSaving || form.invalid">
-        {{ isSaving ? '保存中...' : '保存' }}
+      <button class="btn btn-success" (click)="save()" [disabled]="form.invalid">
+        保存
       </button>
     </div>
   </div>
