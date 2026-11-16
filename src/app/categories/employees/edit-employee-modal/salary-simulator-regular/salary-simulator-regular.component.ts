@@ -1,19 +1,11 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  ChangeDetectorRef,
-  OnInit,
-  OnChanges,
-  SimpleChanges
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectorRef, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   simulateRegularDecision,
   RegularDecisionResult,
-  getEligibleMonthsForRegularDecision
+  getEligibleMonthsForRegularDecision,
+  detectRegularOverwriteTargets
 } from '../../../../utils/salary-simulator.util';
 import { SalaryStandard, SalaryStandardView } from '../../../../models/salary-standard.model';
 
@@ -35,7 +27,6 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
   @Input() hireDate: string = '';
   @Input() retirementDate: string = '';
   @Output() applied = new EventEmitter<RegularDecisionResult>();
-  @Output() closed = new EventEmitter<void>();
 
   isExpanded = false;
   currentYear: number;
@@ -47,8 +38,12 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
   ];
 
   simulationResult: RegularDecisionResult | null = null;
+  showOverwriteConfirm = false;
+  overwriteTargets: SalaryStandard[] = [];
 
-  constructor(private cdr: ChangeDetectorRef) {
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor() {
     this.currentYear = new Date().getFullYear();
   }
 
@@ -63,12 +58,36 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
       this.simulate();
     }
   }
-  
+
+  private isValidYear(): boolean {
+    const year = Number(this.currentYear);
+    return Number.isInteger(year) && year >= 1950 && year <= 2099;
+  }
+
+  private createErrorResult(warningMessage: string): RegularDecisionResult {
+    const year = this.isValidYear() ? Number(this.currentYear) : new Date().getFullYear();
+    return {
+      simulationYear: year,
+      months: this.months.map(m => ({ ...m })),
+      averageAmount: 0,
+      calculatedGrade: 0,
+      calculatedGradeDisplay: '',
+      sufficientMonthsCount: 0,
+      canApply: false,
+      warningMessages: [warningMessage],
+      targetStartYear: year,
+      targetStartMonth: 9,
+      targetEndYear: year + 1,
+      targetEndMonth: 8
+    };
+  }
+
   /**
    * 特定の月が定時決定の対象月か判定
    */
   isMonthEligible(month: number): boolean {
-    const eligibleMonths = getEligibleMonthsForRegularDecision(this.currentYear, this.hireDate);
+    if (!this.isValidYear()) return true;
+    const eligibleMonths = getEligibleMonthsForRegularDecision(Number(this.currentYear), this.hireDate);
     return eligibleMonths.includes(month);
   }
 
@@ -82,6 +101,44 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
         m.amount = 0;
       }
     }
+  }
+
+  private simulate() {
+    if (!this.isExpanded) return;
+
+    if (!this.isValidYear()) {
+      this.simulationResult = this.createErrorResult('判定年度は1950〜2099の整数で入力してください。');
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const hasDecimal = this.months.some(m => m.amount !== null && !Number.isInteger(Number(m.amount)));
+    if (hasDecimal) {
+      this.simulationResult = this.createErrorResult('各月の報酬額に小数は設定できません。整数で入力してください。');
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const hasZeroWithSufficientDays = this.months.some(
+      m => this.isMonthEligible(m.month) && m.daysSufficient && (!m.amount || m.amount <= 0)
+    );
+    if (hasZeroWithSufficientDays) {
+      this.simulationResult = this.createErrorResult(
+        '支払基礎日数が充足している月は、1円以上の報酬額を入力してください。（対象外の月は日数のチェックを外してください）'
+      );
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.simulationResult = simulateRegularDecision(
+      Number(this.currentYear),
+      this.months[0],
+      this.months[1],
+      this.months[2],
+      this.retirementDate,
+      this.hireDate
+    );
+    this.cdr.detectChanges();
   }
 
   toggleExpand() {
@@ -98,7 +155,7 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
     this.simulate();
   }
 
-  onDaysCheckChange(monthIndex?: number) {
+  onDaysCheckChange() {
     this.simulate();
   }
 
@@ -106,50 +163,37 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
     this.simulate();
   }
 
-  private simulate() {
-    if (!this.isExpanded) return;
+  applyToSeptember() {
+    if (!this.simulationResult?.canApply) return;
 
-    const hasDecimal = this.months.some(m => m.amount !== null && !Number.isInteger(Number(m.amount)));
-    if (hasDecimal) {
-      this.simulationResult = {
-        ... (this.simulationResult as any),
-        canApply: false,
-        warningMessages: ['各月の報酬額に小数は設定できません。整数で入力してください。']
-      };
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const hasZeroWithSufficientDays = this.months.some(
-      m => this.isMonthEligible(m.month) && m.daysSufficient && (!m.amount || m.amount <= 0)
-    );
-    if (hasZeroWithSufficientDays) {
-      this.simulationResult = {
-        ...(this.simulationResult as any),
-        canApply: false,
-        warningMessages: ['支払基礎日数が充足している月は、1円以上の報酬額を入力してください。（対象外の月は日数のチェックを外してください）']
-      };
-      this.cdr.detectChanges();
-      return;
-    }
-
-    this.simulationResult = simulateRegularDecision(
-      this.currentYear,
-      this.months[0],
-      this.months[1],
-      this.months[2],
+    this.overwriteTargets = detectRegularOverwriteTargets(
       this.salaryHistories,
-      this.retirementDate,
-      this.hireDate
+      this.simulationResult.targetStartYear,
+      this.simulationResult.targetStartMonth,
+      this.simulationResult.targetEndYear,
+      this.simulationResult.targetEndMonth
     );
+
+    if (this.overwriteTargets.length > 0) {
+      this.showOverwriteConfirm = true;
+    } else {
+      this.confirmOverwrite();
+    }
+
     this.cdr.detectChanges();
   }
 
-  applyToSeptember() {
-    if (this.simulationResult?.canApply) {
+  confirmOverwrite() {
+    this.showOverwriteConfirm = false;
+    if (this.simulationResult) {
       this.applied.emit(this.simulationResult);
-      this.closePanel();
     }
+    this.closePanel();
+  }
+
+  cancelOverwrite() {
+    this.showOverwriteConfirm = false;
+    this.overwriteTargets = [];
   }
 
   clearInputs() {
@@ -164,6 +208,5 @@ export class SalarySimulatorRegularComponent implements OnInit, OnChanges {
 
   closePanel() {
     this.isExpanded = false;
-    this.closed.emit();
   }
 }

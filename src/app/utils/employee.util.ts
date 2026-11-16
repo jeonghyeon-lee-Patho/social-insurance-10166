@@ -122,10 +122,12 @@ export function getDisplayName(employee: Employee): string {
 export function checkDependentEligibility(
   dep: Dependent,
   employeeAnnualIncome: number,
+  employeeDateOfBirth?: string
 ): { isHealthEligible: boolean; isPension3Eligible: boolean } {
   const age = calculateAge(dep.dateOfBirth);
+  const empAge = employeeDateOfBirth ? calculateAge(employeeDateOfBirth) : 0;
 
-  if (age >= 75) {
+  if (age >= 75 || empAge >= 75) {
     return { isHealthEligible: false, isPension3Eligible: false };
   }
 
@@ -140,7 +142,9 @@ export function checkDependentEligibility(
   if (isHealthEligible) {
     const empIncome = Number(employeeAnnualIncome) || 0;
 
-    if (dep.isLivingTogether) {
+    if (empIncome <= 0) {
+      isHealthEligible = false;
+    } else if (dep.isLivingTogether) {
       if (depIncome > 0 && (depIncome * 2 >= empIncome)) {
         isHealthEligible = false;
       }
@@ -152,8 +156,13 @@ export function checkDependentEligibility(
     }
   }
 
-  const isPension3Eligible = dep.relationship === 'spouse' && isHealthEligible && age >= 20 && age < 60;
-
+  const isPension3Eligible =
+  dep.relationship === 'spouse' &&
+  isHealthEligible &&
+  age >= 20 &&
+  age < 60 &&
+  empAge < 70;
+  
   return { isHealthEligible, isPension3Eligible };
 }
 
@@ -355,4 +364,13 @@ export function calculateInsuranceEndYearMonth(retirementDateStr?: string, hireD
     return { year: endYear, month: endMonth };
   }
 }
+
+export function formatEffectivePeriod(startYear: number, startMonth: number, endYear?: number, endMonth?: number): string {
+  const startStr = `${startYear}/${String(startMonth).padStart(2, '0')}`;
+  if (endYear && endMonth) {
+    return `${startStr} ~ ${endYear}/${String(endMonth).padStart(2, '0')}`;
+  }
+  return `${startStr} ~`;
+}
+
 

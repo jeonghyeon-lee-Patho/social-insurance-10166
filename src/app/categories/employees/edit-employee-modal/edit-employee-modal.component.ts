@@ -31,7 +31,6 @@ export class EditEmployeeModalComponent implements OnInit {
   currentStep: 1 | 2 = 1;
   form: FormGroup;
   isSaving = false;
-  hasLeftStep1 = false;
 
   currentYear = new Date().getFullYear();
   years: number[] = [];
@@ -78,11 +77,11 @@ export class EditEmployeeModalComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   constructor() {
-    for (let y = this.currentYear; y >= 1940; y--) {
+    for (let y = this.currentYear; y >= 1900; y--) {
       this.years.push(y);
     }
 
-    for (let y = this.currentYear + 1; y >= 1960; y--) {
+    for (let y = this.currentYear + 1; y >= 1950; y--) {
       this.hireYears.push(y);
     }
 
@@ -116,10 +115,6 @@ export class EditEmployeeModalComponent implements OnInit {
       this.currentStep = 1;
       this.resetForm();
     }
-  }
-
-  get isHireDateLocked(): boolean {
-    return !!this.selectedEmployee || this.hasLeftStep1;
   }
 
   /**
@@ -186,10 +181,45 @@ export class EditEmployeeModalComponent implements OnInit {
         errors['retirementDateBeforeHire'] = true;
       }
 
+      const sortedInsuranceAsc = [...this.insuranceStandardList].sort(
+        (a, b) => (a.effectiveStartYear * 100 + a.effectiveStartMonth) - (b.effectiveStartYear * 100 + b.effectiveStartMonth)
+      );
+
+      if (hireDate) {
+        const [hireY, hireM] = hireDate.split('-').map(Number);
+        const hireYM = hireY * 100 + hireM;
+
+        // 1. 保険適用基準が2件以上ある場合、2件目の開始年月以降には設定不可
+        if (sortedInsuranceAsc.length >= 2) {
+          const secondYM = sortedInsuranceAsc[1].effectiveStartYear * 100 + sortedInsuranceAsc[1].effectiveStartMonth;
+          if (hireYM >= secondYM) {
+            errors['hireAfterInsuranceChange'] = true;
+          }
+        }
+
+        // 2. 確定済み給与履歴（0円超）または賞与履歴の最も古い年月より後には設定不可
+        let minSalaryBonusYM = 999999;
+
+        for (const sal of (this.salaryStandardList || [])) {
+          if ((Number(sal.monthlyAmount) || 0) <= 0) continue;
+          const ym = sal.effectiveStartYear * 100 + sal.effectiveStartMonth;
+          if (ym < minSalaryBonusYM) minSalaryBonusYM = ym;
+        }
+
+        for (const b of (this.bonusHistoryList || [])) {
+          const ym = b.paymentYear * 100 + b.paymentMonth;
+          if (ym < minSalaryBonusYM) minSalaryBonusYM = ym;
+        }
+
+        if (minSalaryBonusYM !== 999999 && hireYM > minSalaryBonusYM) {
+          errors['hireAfterHistory'] = true;
+        }
+      }
+
       if (retirementDate) {
         let maxHistoryYM = 0;
-        for (const std of this.insuranceStandardList) {
-          const ym = std.effectiveStartYear * 100 + std.effectiveStartMonth;
+        for (let i = 1; i < sortedInsuranceAsc.length; i++) {
+          const ym = sortedInsuranceAsc[i].effectiveStartYear * 100 + sortedInsuranceAsc[i].effectiveStartMonth;
           if (ym > maxHistoryYM) maxHistoryYM = ym;
         }
 
@@ -223,7 +253,6 @@ export class EditEmployeeModalComponent implements OnInit {
    */
   private async loadExistingEmployee() {
     if (!this.selectedEmployee || !this.currentUser) return;
-    this.hasLeftStep1 = true;
     this.isLoadingHistories = true;
 
     this.form.patchValue({
@@ -331,7 +360,6 @@ export class EditEmployeeModalComponent implements OnInit {
     this.selectedHireYear = this.selectedHireMonth = this.selectedHireDay = '';
     this.selectedRetireYear = this.selectedRetireMonth = this.selectedRetireDay = '';
 
-    this.hasLeftStep1 = false;
     this.insuranceStandardList = [];
     this.salaryStandardList = [];
     this.bonusHistoryList = [];
@@ -363,6 +391,8 @@ export class EditEmployeeModalComponent implements OnInit {
     if (
       this.form.hasError('birthDateInFuture') ||
       this.form.hasError('hireDateBeforeBirth') ||
+      this.form.hasError('hireAfterInsuranceChange') ||
+      this.form.hasError('hireAfterHistory') ||
       this.form.hasError('retirementDateBeforeHire') ||
       this.form.hasError('retirementBeforeHistory')
     ) {
@@ -513,7 +543,8 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   getDependentStatusClass(dep: Dependent): string {
-    const res = checkDependentEligibility(dep, this.employeeAnnualIncome);
+    const empBirth = this.form.get('dateOfBirth')?.value;
+    const res = checkDependentEligibility(dep, this.employeeAnnualIncome, empBirth);
     if (!res.isHealthEligible) {
       return 'ineligible-health';
     }
@@ -521,8 +552,8 @@ export class EditEmployeeModalComponent implements OnInit {
   }
 
   getDependentStatusBadgeText(dep: Dependent): string {
-    const res = checkDependentEligibility(dep, this.employeeAnnualIncome);
-    const age = calculateAge(dep.dateOfBirth);
+    const empBirth = this.form.get('dateOfBirth')?.value;
+    const res = checkDependentEligibility(dep, this.employeeAnnualIncome, empBirth);
 
     if (!res.isHealthEligible) {
       return '❌ 健保対象外';
@@ -530,7 +561,7 @@ export class EditEmployeeModalComponent implements OnInit {
     if (res.isPension3Eligible) {
       return '健保: ◯ / 3号: ◯';
     }
-    if (dep.relationship === 'spouse' && (age >= 60 || age < 20)) {
+    if (dep.relationship === 'spouse') {
       return '健保: ◯ / 3号: ✕';
     }
 
@@ -632,12 +663,18 @@ export class EditEmployeeModalComponent implements OnInit {
 
   goToNextStep() {
     if (this.currentStep < 2) {
-      this.hasLeftStep1 = true;
-
       if (!this.selectedEmployee && this.insuranceStandardList.length === 0) {
         this.generateDefaultInsuranceStandard();
       } else {
         this.syncInsuranceStandardsWithDates();
+      }
+
+      if (
+        !this.selectedEmployee &&
+        this.salaryStandardList.length === 1 &&
+        (Number(this.salaryStandardList[0].monthlyAmount) || 0) === 0
+      ) {
+        this.salaryStandardList = [];
       }
 
       if (!this.selectedEmployee && this.salaryStandardList.length === 0) {
@@ -685,7 +722,7 @@ export class EditEmployeeModalComponent implements OnInit {
       );
 
       const hasIneligibleDependent = this.dependents.some(dep => {
-        return !checkDependentEligibility(dep, this.employeeAnnualIncome).isHealthEligible;
+        return !checkDependentEligibility(dep, this.employeeAnnualIncome, formValue.dateOfBirth).isHealthEligible;
       });
 
       const isNumberChanged = !this.selectedEmployee || this.selectedEmployee.employeeNumber !== formValue.employeeNumber;
@@ -756,8 +793,16 @@ export class EditEmployeeModalComponent implements OnInit {
       if (controlName === 'dateOfBirth' && groupErrors['birthDateInFuture']) {
         return '生年月日は本日以前の日付を指定してください';
       }
-      if (controlName === 'hireDate' && groupErrors['hireDateBeforeBirth']) {
-        return '入社年月日は生年月日より後の日付にしてください';
+      if (controlName === 'hireDate') {
+        if (groupErrors['hireDateBeforeBirth']) {
+          return '入社年月日は生年月日より後の日付にしてください';
+        }
+        if (groupErrors['hireAfterInsuranceChange']) {
+          return '入社年月日は2件目以降の社会保険適用基準の開始年月より前に設定してください';
+        }
+        if (groupErrors['hireAfterHistory']) {
+          return '入社年月日は既存の給与・賞与履歴の最も古い年月以前にしてください';
+        }
       }
       if (controlName === 'retirementDate') {
         if (groupErrors['retirementDateBeforeHire']) {

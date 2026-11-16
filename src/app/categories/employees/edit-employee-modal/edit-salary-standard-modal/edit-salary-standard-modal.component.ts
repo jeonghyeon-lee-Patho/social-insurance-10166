@@ -97,13 +97,13 @@ export class EditSalaryStandardModalComponent implements OnInit {
     }
 
     // 開始年月の検証
-    if (!sY || !sM || sM < 1 || sM > 12 || !Number.isInteger(sY) || !Number.isInteger(sM)) {
-      this.errors.push('適用開始年月が正しく入力されていません。(1〜12月)');
+    if (!sY || !sM || sY < 1950 || sY > 2099 || sM < 1 || sM > 12 || !Number.isInteger(sY) || !Number.isInteger(sM)) {
+      this.errors.push('適用開始年月が正しく入力されていません。(1950〜2099年、1〜12月)');
     }
 
     // 終了年月の検証
-    if (!eY || !eM || eM < 1 || eM > 12 || !Number.isInteger(eY) || !Number.isInteger(eM)) {
-      this.errors.push('適用終了年月が正しく入力されていません。(1〜12月)');
+    if (!eY || !eM || eY < 1950 || eY > 2099 || eM < 1 || eM > 12 || !Number.isInteger(eY) || !Number.isInteger(eM)) {
+      this.errors.push('適用終了年月が正しく入力されていません。(1950〜2099年、1〜12月)');
     }
 
     if (sY && sM && eY && eM) {

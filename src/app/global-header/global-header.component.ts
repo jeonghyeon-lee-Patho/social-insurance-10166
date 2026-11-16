@@ -104,7 +104,11 @@ export class GlobalHeaderComponent implements OnInit, OnDestroy {
 
 
   async saveOrganizationName() {
-    if (!this.isEditingOrganization || !this.currentUser || !this.editedOrgName.trim()) {
+    if (!this.isEditingOrganization || !this.currentUser) {
+      return;
+    }
+    if (!this.editedOrgName.trim()) {
+      this.cancelEditingOrganization();
       return;
     }
   

@@ -28,7 +28,7 @@
         <div class="form-group">
           <label class="form-label" for="startYear">適用開始年月 <span class="required">*</span></label>
           <div class="input-group-inline">
-            <input type="number" id="startYear" [(ngModel)]="startYear" placeholder="YYYY" min="1950" max="2050"
+            <input type="number" id="startYear" [(ngModel)]="startYear" placeholder="YYYY" min="1950" max="2099"
               class="form-control year-input" />
             <span class="separator">年</span>
             <input type="number" id="startMonth" [(ngModel)]="startMonth" placeholder="MM" min="1" max="12"
@@ -40,7 +40,7 @@
         <div class="form-group">
           <label class="form-label" for="endYear">適用終了年月 <span class="required">*</span></label>
           <div class="input-group-inline">
-            <input type="number" id="endYear" [(ngModel)]="endYear" placeholder="YYYY" min="1950" max="2050"
+            <input type="number" id="endYear" [(ngModel)]="endYear" placeholder="YYYY" min="1950" max="2099"
               class="form-control year-input" />
             <span class="separator">年</span>
             <input type="number" id="endMonth" [(ngModel)]="endMonth" placeholder="MM" min="1" max="12"
@@ -89,7 +89,7 @@
         <ul class="info-list">
           <li>
             <strong>等級の自動判定：</strong>
-            入力された報酬月額に基づき、健康保険（1～50等級）および厚生年金（1～35等級）の標準報酬月額が自動判定されます。
+            入力された報酬月額に基づき、健康保険（1～50等級）および厚生年金（1～32等級）の標準報酬月額が自動判定されます。
           </li>
           <li>
             <strong>二以上事業所勤務（兼業・副業）：</strong>

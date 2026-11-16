@@ -14,7 +14,6 @@ import {
   getAttributionYearMonth,
   checkEmployeeEligibility,
   resolveRatesAndExemptions,
-  resolveInsuranceMultipliers,
   calculateMonthlyPremiums,
   calculateAnnualPremiums,
   resolveAlertMetadata,
@@ -294,20 +293,24 @@ export class PremiumComponent implements OnInit, OnDestroy {
           emp, targetYM, targetYear, targetMonth, insMap, this.insuranceRateMastersMap
         );
 
-        const isTwoMonthsCollection = (!isSameMonth && empBasis === 'nextMonth' && targetYM === eligibility.collEndYM && eligibility.isEndOfMonthRetirement && !resolvedSalaryRates.isExemptStandard && (eligibility.currentSal?.monthlyAmount ?? 0) > 0);
+        const isTwoMonthsCollection = (
+          !isSameMonth &&
+          empBasis === 'nextMonth' &&
+          targetYM === eligibility.collEndYM &&
+          eligibility.isEndOfMonthRetirement
+        );
 
         const targetRates = isTwoMonthsCollection
           ? resolveRatesAndExemptions(emp, targetYM, targetYear, targetMonth, insMap, this.insuranceRateMastersMap)
           : resolvedSalaryRates;
 
-        const multipliers = resolveInsuranceMultipliers(resolvedSalaryRates, targetRates, isTwoMonthsCollection);
-
         const calculation = calculateMonthlyPremiums(
           eligibility.currentSal,
+          eligibility.targetSal,
           eligibility.currentBonus,
           resolvedSalaryRates,
+          targetRates,
           resolvedBonusRates,
-          multipliers,
           isTwoMonthsCollection,
           this.activeSegment
         );
@@ -320,9 +323,13 @@ export class PremiumComponent implements OnInit, OnDestroy {
           empAttrYear, empAttrMonth, empBasis, this.activeSegment, hasBonusThisMonth
         );
 
+        const displayStandardName = (isTwoMonthsCollection && resolvedSalaryRates.isExemptStandard && !targetRates.isExemptStandard)
+          ? targetRates.masterName
+          : resolvedSalaryRates.masterName;
+
         result.push({
           ...emp,
-          insuranceStandardName: resolvedSalaryRates.masterName,
+          insuranceStandardName: displayStandardName,
           totalRemuneration: calculation.totalRemuneration,
           monthlySalary: calculation.monthlySalary,
           salaryGrade: calculation.salaryGrade,

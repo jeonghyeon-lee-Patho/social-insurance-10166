@@ -30,9 +30,12 @@ export class LoginComponent implements OnInit {
     
   ngOnInit() {
     // 初回のFirebase認証チェック完了を待ってから画面を表示
-    authState(this.auth).pipe(first()).subscribe(user => {
+    authState(this.auth).pipe(first()).subscribe(async user => {
       if (user && user.emailVerified) {
-        this.router.navigate(['/premium']);
+        const snap = await getDoc(doc(this.firestore, 'social_users', user.uid));
+        if (snap.exists()) {
+          this.router.navigate(['/premium']);
+        }
       }
     });
   }

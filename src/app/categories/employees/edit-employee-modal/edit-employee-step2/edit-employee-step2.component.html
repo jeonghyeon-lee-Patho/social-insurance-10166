@@ -78,7 +78,7 @@
             <th class="col-actions">操作</th>
           </tr>
         </thead>
-        <tbody *ngIf="salaryStandardList.length > 0">
+        <tbody>
           <tr *ngFor="let record of salaryStandardList; let i = index">
             <td class="col-period">{{ record.effectivePeriod }}</td>
             <td class="col-amount">{{ record.monthlyAmountDisplay }}</td>
@@ -107,12 +107,12 @@
     <!-- === シミュレーター統合 === -->
     <div class="simulators-wrapper">
       <!-- 定時決定判定シミュレーター -->
-      <app-salary-simulator-regular #regularSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
+      <app-salary-simulator-regular [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
         [retirementDate]="retirementDate" (applied)="onRegularDecisionApplied($event)">
       </app-salary-simulator-regular>
 
       <!-- 随時改定判定シミュレーター -->
-      <app-salary-simulator-changed #varChangedSimulator [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
+      <app-salary-simulator-changed [salaryHistories]="salaryStandardList" [hireDate]="hireDate"
         [retirementDate]="retirementDate" (applied)="onVarChangedDecisionApplied($event)">
       </app-salary-simulator-changed>
     </div>
@@ -149,7 +149,7 @@
           <span class="unit-suffix">円</span>
         </div>
         <span class="prev-hint">
-          ※ 健康保険の{{ hireFiscalYear ? hireFiscalYear : '' }}累計に合算
+          ※ 健康保険の{{ hireFiscalYear }}累計に合算
         </span>
       </div>
     </div>

@@ -1,25 +1,14 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  ChangeDetectorRef,
-  OnInit,
-  OnDestroy,
-  OnChanges,
-  SimpleChanges
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectorRef, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
+  VarChangedDecisionResult,
   simulateVarChangedDecisionNormal,
   simulateVarChangedDecisionMaternityReturn,
-  VarChangedDecisionResult,
-  hasPreviousDataAtMonth,
-  getPreviousAmountAtMonth,
-  getPreviousGradeAtMonth,
+  findSalaryHistoryAtMonth,
   getPreviousYearMonth,
-  detectOverwriteTargets
+  detectOverwriteTargets,
+  getVarChangedApplicationPeriod
 } from '../../../../utils/salary-simulator.util';
 import { SalaryStandard, SalaryStandardView } from '../../../../models/salary-standard.model';
 
@@ -37,13 +26,11 @@ interface MonthInput {
   templateUrl: './salary-simulator-changed.component.html',
   styleUrl: './salary-simulator-changed.component.css'
 })
-export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnChanges {
+export class SalarySimulatorChangedComponent implements OnChanges {
   @Input() salaryHistories: (SalaryStandard | SalaryStandardView)[] = [];
   @Input() hireDate: string = '';
   @Input() retirementDate: string = '';
-
   @Output() applied = new EventEmitter<VarChangedDecisionResult>();
-  @Output() closed = new EventEmitter<void>();
 
   isExpanded = false;
   currentYear: number;
@@ -61,46 +48,62 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
 
   simulationResult: VarChangedDecisionResult | null = null;
   showOverwriteConfirm = false;
-  overwriteTargets: Array<{ id: string; currentPeriod: string }> = [];
+  overwriteTargets: SalaryStandard[] = [];
 
-  constructor(private cdr: ChangeDetectorRef) {
-    this.currentYear = new Date().getFullYear();
-    this.currentMonth = new Date().getMonth() + 1;
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor() {
+    const now = new Date();
+    this.currentYear = now.getFullYear();
+    this.currentMonth = now.getMonth() + 1;
     this.initializeMonthInputs();
   }
 
-  ngOnInit() {}
-  ngOnDestroy() {}
-
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['salaryHistories'] && this.isExpanded) {
-      this.validateChangeMonth();
+    if ((changes['salaryHistories'] || changes['retirementDate'] || changes['hireDate']) && this.isExpanded) {
       this.simulate();
     }
   }
 
   private initializeMonthInputs() {
-    this.months = [];
-    for (let i = 0; i < 3; i++) {
-      let month = this.currentMonth + i;
-      let year = this.currentYear;
-      if (month > 12) {
-        month = month - 12;
-        year++;
-      }
-      this.months.push({
-        month,
-        year,
+    const baseYear = this.isValidYearMonth() ? Number(this.currentYear) : new Date().getFullYear();
+    const baseMonth = this.isValidYearMonth() ? Number(this.currentMonth) : new Date().getMonth() + 1;
+
+    this.months = [0, 1, 2].map(offset => {
+      const target = this.addMonths(baseYear, baseMonth, offset);
+      return {
+        month: target.month,
+        year: target.year,
         amount: 0,
         daysSufficient: true
-      });
-    }
+      };
+    });
+  }
+
+  private isValidYearMonth(): boolean {
+    const year = Number(this.currentYear);
+    const month = Number(this.currentMonth);
+    return (
+      Number.isInteger(year) &&
+      year >= 1950 &&
+      year <= 2099 &&
+      Number.isInteger(month) &&
+      month >= 1 &&
+      month <= 12
+    );
+  }
+
+  private addMonths(year: number, month: number, offset: number): { year: number; month: number } {
+    const totalMonths = year * 12 + (month - 1) + offset;
+    return {
+      year: Math.floor(totalMonths / 12),
+      month: (totalMonths % 12) + 1
+    };
   }
 
   toggleExpand() {
     this.isExpanded = !this.isExpanded;
     if (this.isExpanded) {
-      this.validateChangeMonth();
       this.simulate();
     }
     this.cdr.detectChanges();
@@ -108,7 +111,6 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
 
   onChangeMonthChange() {
     this.initializeMonthInputs();
-    this.validateChangeMonth();
     this.simulate();
   }
 
@@ -124,71 +126,21 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
     this.simulate();
   }
 
-  onDaysCheckChange(monthIndex?: number) {
+  onDaysCheckChange() {
     this.simulate();
-  }
-
-  /**
-   * 変動開始月の直前月（従前データ）の妥当性を検証
-   */
-  private validateChangeMonth(): boolean {
-    // 変動開始月の「直前月」（前月）を算出
-    const prev = getPreviousYearMonth(Number(this.currentYear), Number(this.currentMonth));
-
-    const historyItems = this.salaryHistories.map(h => ({
-      effectiveStartYear: h.effectiveStartYear,
-      effectiveStartMonth: h.effectiveStartMonth,
-      effectiveEndYear: h.effectiveEndYear,
-      effectiveEndMonth: h.effectiveEndMonth,
-      monthlyAmount: h.monthlyAmount,
-      salaryGrade: h.salaryGrade
-    }));
-
-    // 前月に適用中のデータが存在するか確認
-    this.hasPreviousData = hasPreviousDataAtMonth(historyItems, prev.year, prev.month);
-
-    if (!this.hasPreviousData) {
-      this.previousAmount = 0;
-      this.previousGrade = 0;
-      this.simulationResult = {
-        changeStartYear: this.currentYear,
-        changeStartMonth: this.currentMonth,
-        mode: this.judgmentMode,
-        hasFixedWageChange: this.hasFixedWageChange,
-        noRerequisitionIn3Months: this.noRerequisitionIn3Months,
-        changeDirection: this.changeDirection,
-        previousGrade: 0,
-        previousAmount: 0,
-        months: this.months,
-        averageAmount: 0,
-        calculatedGrade: 0,
-        calculatedGradeDisplay: '',
-        gradeDifference: 0,
-        canApply: false,
-        warningMessages: [
-          `変動開始月の前月（${prev.year}年${prev.month}月）に適用中の給与履歴（従前報酬）が存在しないため判定および入力は行えません。（新規登録は [+ 履歴追加] をご利用ください）`
-        ]
-      };
-      return false;
-    }
-
-    // 前月の従前額および従前等級を取得
-    this.previousAmount = getPreviousAmountAtMonth(historyItems, prev.year, prev.month);
-    this.previousGrade = getPreviousGradeAtMonth(historyItems, prev.year, prev.month);
-
-    return true;
   }
 
   private simulate() {
     if (!this.isExpanded) return;
 
+    if (!this.validateChangeMonth()) {
+      this.cdr.detectChanges();
+      return;
+    }
+
     const hasDecimal = this.months.some(m => m.amount !== null && !Number.isInteger(Number(m.amount)));
     if (hasDecimal) {
-      this.simulationResult = {
-        ...(this.simulationResult as any),
-        canApply: false,
-        warningMessages: ['各月の報酬額に小数は設定できません。整数で入力してください。']
-      };
+      this.simulationResult = this.createErrorResult('各月の報酬額に小数は設定できません。整数で入力してください。');
       this.cdr.detectChanges();
       return;
     }
@@ -197,29 +149,19 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
       m => m.daysSufficient && (!m.amount || m.amount <= 0)
     );
     if (hasZeroWithSufficientDays) {
-      this.simulationResult = {
-        ...(this.simulationResult as any),
-        canApply: false,
-        warningMessages: ['支払基礎日数が充足している月は、1円以上の報酬額を入力してください。']
-      };
+      this.simulationResult = this.createErrorResult('支払基礎日数が充足している月は、1円以上の報酬額を入力してください。');
       this.cdr.detectChanges();
       return;
     }
 
-    const valid = this.validateChangeMonth();
-    if (!valid) {
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const month1 = this.months[0];
-    const month2 = this.months[1];
-    const month3 = this.months[2];
+    const [month1, month2, month3] = this.months;
+    const year = Number(this.currentYear);
+    const month = Number(this.currentMonth);
 
     if (this.judgmentMode === 'normal') {
       this.simulationResult = simulateVarChangedDecisionNormal(
-        this.currentYear,
-        this.currentMonth,
+        year,
+        month,
         this.previousGrade,
         this.previousAmount,
         month1,
@@ -227,46 +169,94 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
         month3,
         this.hasFixedWageChange,
         this.noRerequisitionIn3Months,
-        this.changeDirection
+        this.changeDirection,
+        this.retirementDate,
+        this.hireDate
       );
     } else {
       this.simulationResult = simulateVarChangedDecisionMaternityReturn(
-        this.currentYear,
-        this.currentMonth,
+        year,
+        month,
         this.previousGrade,
         this.previousAmount,
         month1,
         month2,
-        month3
+        month3,
+        this.retirementDate,
+        this.hireDate
       );
     }
-
     this.cdr.detectChanges();
+  }
+
+  /**
+   * 変動開始月の直前月（従前データ）の妥当性を検証
+   */
+  private validateChangeMonth(): boolean {
+    if (!this.isValidYearMonth()) {
+      this.hasPreviousData = false;
+      this.previousAmount = 0;
+      this.previousGrade = 0;
+      this.simulationResult = this.createErrorResult('変動開始年月は1950〜2099年、1〜12月の整数で入力してください。');
+      return false;
+    }
+    // 変動開始月の「直前月」（前月）を算出
+    const prev = getPreviousYearMonth(Number(this.currentYear), Number(this.currentMonth));
+    const prevHistory = findSalaryHistoryAtMonth(this.salaryHistories, prev.year, prev.month);
+
+    this.hasPreviousData = Boolean(prevHistory);
+
+    if (!prevHistory) {
+      this.previousAmount = 0;
+      this.previousGrade = 0;
+      this.simulationResult = this.createErrorResult(
+        `変動開始月の前月（${prev.year}年${prev.month}月）に適用中の給与履歴（従前報酬）が存在しないため判定および入力は行えません。（新規登録は [+ 履歴追加] をご利用ください）`
+      );
+      return false;
+    }
+
+    this.previousAmount = prevHistory.monthlyAmount;
+    this.previousGrade = prevHistory.salaryGrade;
+    return true;
+  }
+
+  private createErrorResult(warningMessage: string): VarChangedDecisionResult {
+    return {
+      changeStartYear: Number(this.currentYear) || 0,
+      changeStartMonth: Number(this.currentMonth) || 0,
+      mode: this.judgmentMode,
+      hasFixedWageChange: this.hasFixedWageChange,
+      noRerequisitionIn3Months: this.noRerequisitionIn3Months,
+      changeDirection: this.changeDirection,
+      previousGrade: this.previousGrade,
+      previousAmount: this.previousAmount,
+      months: this.months.map(m => ({ ...m })),
+      averageAmount: 0,
+      calculatedGrade: 0,
+      calculatedGradeDisplay: '',
+      gradeDifference: 0,
+      canApply: false,
+      warningMessages: [warningMessage]
+    };
   }
 
   applyOverwrite() {
     if (!this.simulationResult?.canApply) return;
-  
+
     this.overwriteTargets = detectOverwriteTargets(
-      this.salaryHistories.map(h => ({
-        id: h.id,
-        effectiveStartYear: h.effectiveStartYear,
-        effectiveStartMonth: h.effectiveStartMonth,
-        effectiveEndYear: h.effectiveEndYear,
-        effectiveEndMonth: h.effectiveEndMonth
-      })),
-      this.currentYear,
-      this.currentMonth,
+      this.salaryHistories,
+      Number(this.currentYear),
+      Number(this.currentMonth),
       this.retirementDate,
       this.hireDate
     );
-  
+
     if (this.overwriteTargets.length > 0) {
       this.showOverwriteConfirm = true;
     } else {
       this.confirmOverwrite();
     }
-  
+
     this.cdr.detectChanges();
   }
 
@@ -290,16 +280,24 @@ export class SalarySimulatorChangedComponent implements OnInit, OnDestroy, OnCha
 
   closePanel() {
     this.isExpanded = false;
-    this.closed.emit();
   }
 
   getMonth4Display(): string {
-    let month4Month = this.currentMonth + 3;
-    let month4Year = this.currentYear;
-    if (month4Month > 12) {
-      month4Month = month4Month - 12;
-      month4Year++;
-    }
-    return `${month4Year}/${String(month4Month).padStart(2, '0')}`;
+    if (!this.isValidYearMonth()) return '--/--';
+    const target = this.addMonths(Number(this.currentYear), Number(this.currentMonth), 3);
+    return `${target.year}/${String(target.month).padStart(2, '0')}`;
+  }
+
+  get applicationPeriodDisplay(): string {
+    if (!this.isValidYearMonth()) return '';
+    const period = getVarChangedApplicationPeriod(
+      Number(this.currentYear),
+      Number(this.currentMonth),
+      this.retirementDate,
+      this.hireDate
+    );
+    const startStr = `${period.startYear}/${String(period.startMonth).padStart(2, '0')}`;
+    const endStr = `${period.endYear}/${String(period.endMonth).padStart(2, '0')}`;
+    return `${startStr} 〜 ${endStr}`;
   }
 }

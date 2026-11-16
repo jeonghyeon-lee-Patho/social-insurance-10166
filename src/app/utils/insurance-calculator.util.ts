@@ -223,9 +223,17 @@ export function checkEmployeeEligibility(
     return attrYM >= sStart && attrYM <= sEnd;
   });
 
-  const currentBonus = empBonusList.find(
-    b => Number(b.paymentYear) === targetYear && Number(b.paymentMonth) === targetMonth
-  );
+  const targetSal = empSalList.find(s => {
+    const sStart = Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth);
+    const sEnd = (s.effectiveEndYear && s.effectiveEndMonth)
+      ? Number(s.effectiveEndYear) * 100 + Number(s.effectiveEndMonth)
+      : 999999;
+    return targetYM >= sStart && targetYM <= sEnd;
+  });
+
+  const currentBonus = isInsuredActivePeriod
+    ? empBonusList.find(b => Number(b.paymentYear) === targetYear && Number(b.paymentMonth) === targetMonth)
+    : undefined;
 
   let isEligibleForDenominator = false;
   let shouldDisplayInTable = false;
@@ -245,25 +253,29 @@ export function checkEmployeeEligibility(
     isEligibleForDenominator = !(collEndYM < fiscalStartYM || collStartYM > fiscalEndYM);
 
     const hasAnnualSalary = empSalList.some(s => {
-      const sStart = Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth);
-      const sEnd = (s.effectiveEndYear && s.effectiveEndMonth)
+      if ((Number(s.monthlyAmount) || 0) <= 0) return false;
+      const sStart = Math.max(Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth), collStartYM);
+      const rawEnd = (s.effectiveEndYear && s.effectiveEndMonth)
         ? Number(s.effectiveEndYear) * 100 + Number(s.effectiveEndMonth)
         : 999999;
-      return !(sEnd < fiscalStartYM || sStart > fiscalEndYM);
+      const sEnd = Math.min(rawEnd, collEndYM);
+
+      return sStart <= sEnd && !(sEnd < fiscalStartYM || sStart > fiscalEndYM);
     });
 
     const hasAnnualBonus = empBonusList.some(b => {
       const bYM = Number(b.paymentYear) * 100 + Number(b.paymentMonth);
-      return bYM >= fiscalStartYM && bYM <= fiscalEndYM;
+      return bYM >= collStartYM && bYM <= collEndYM && bYM >= fiscalStartYM && bYM <= fiscalEndYM;
     });
 
-    shouldDisplayInTable = hasAnnualSalary || hasAnnualBonus;
+    shouldDisplayInTable = isEligibleForDenominator && (hasAnnualSalary || hasAnnualBonus);
   }
 
   return {
     isEligibleForDenominator,
     shouldDisplayInTable,
     currentSal,
+    targetSal,
     currentBonus,
     collStartYM,
     collEndYM,
@@ -296,12 +308,20 @@ export function resolveRatesAndExemptions(
     masterName === '未設定' ||
     currentIns.insuranceRateMasterId === 'N/A';
 
-  let healthRate = 0, careRate = 0, pensionRate = 0, empBurdenRatio = 50;
+  let healthRate = 0, careRate = 0, pensionRate = 0;
+  let empBurdenRatio = 50;
+  let careEmpBurdenRatio = 50;
+
   if (!isExemptStandard && rateMaster && rateMaster.rates) {
     healthRate = Number(rateMaster.rates.healthInsurance) || 0;
     careRate = Number(rateMaster.rates.careInsurance) || 0;
     pensionRate = Number(rateMaster.rates.pensionInsurance) || 0;
-    empBurdenRatio = Number(rateMaster.burdenRatio?.employee) || 50;
+    empBurdenRatio = (rateMaster.burdenRatio?.employee !== undefined && rateMaster.burdenRatio?.employee !== null)
+      ? Number(rateMaster.burdenRatio.employee)
+      : 50;
+    careEmpBurdenRatio = (rateMaster.burdenRatioCare?.employee !== undefined && rateMaster.burdenRatioCare?.employee !== null)
+      ? Number(rateMaster.burdenRatioCare.employee)
+      : 50;
   }
 
   const legalAgeAtAttrMonth = getLegalAgeForInsurance(emp.dateOfBirth, attrYear, attrMonth);
@@ -333,30 +353,20 @@ export function resolveRatesAndExemptions(
     careRate,
     pensionRate,
     empBurdenRatio,
+    careEmpBurdenRatio,
     applyHealth,
     applyCare,
     applyPension
   };
 }
 
-export function resolveInsuranceMultipliers(
-  rates: ReturnType<typeof resolveRatesAndExemptions>,
-  targetRates: ReturnType<typeof resolveRatesAndExemptions>,
-  isTwoMonthsCollection: boolean
-): InsuranceMultipliers {
-  return {
-    health: (rates.applyHealth ? 1 : 0) + (isTwoMonthsCollection && targetRates.applyHealth ? 1 : 0),
-    care: (rates.applyCare ? 1 : 0) + (isTwoMonthsCollection && targetRates.applyCare ? 1 : 0),
-    pension: (rates.applyPension ? 1 : 0) + (isTwoMonthsCollection && targetRates.applyPension ? 1 : 0)
-  };
-}
-
 export function calculateMonthlyPremiums(
   currentSal: SalaryStandard | undefined,
+  targetSal: SalaryStandard | undefined,
   currentBonus: BonusHistory | undefined,
   salaryRates: ReturnType<typeof resolveRatesAndExemptions>,
+  targetRates: ReturnType<typeof resolveRatesAndExemptions>,
   bonusRates: ReturnType<typeof resolveRatesAndExemptions>,
-  multipliers: InsuranceMultipliers,
   isTwoMonthsCollection: boolean,
   activeSegment: SegmentType
 ) {
@@ -365,32 +375,68 @@ export function calculateMonthlyPremiums(
   const bonusActualAmount = currentBonus ? (Number(currentBonus.actualPaymentAmount) || 0) : 0;
   const totalRemuneration = rawMonthlySalary + bonusActualAmount;
 
-  const hasGrade = currentSal?.salaryGrade !== undefined && currentSal?.salaryGrade !== null;
-  const gradeMaster = (rawMonthlySalary > 0 && hasGrade)
+  // 1. 帰属月（前月分または当月分）の標準報酬月額・保険料算出
+  const hasGrade1 = currentSal?.salaryGrade !== undefined && currentSal?.salaryGrade !== null;
+  const gradeMaster1 = (rawMonthlySalary > 0 && hasGrade1)
     ? getSalaryGradeByNumber(Number(currentSal.salaryGrade))
     : null;
+  const stdHealthSalary1 = gradeMaster1 ? gradeMaster1.baseAmount : (rawMonthlySalary > 0 ? rawMonthlySalary : 0);
+  const stdPensionSalary1 = stdHealthSalary1 > 0 ? Math.max(88000, Math.min(stdHealthSalary1, 650000)) : 0;
 
-  const stdHealthSalary = gradeMaster ? gradeMaster.baseAmount : (rawMonthlySalary > 0 ? rawMonthlySalary : 0);
-  const stdPensionSalary = stdHealthSalary > 0 ? Math.max(88000, Math.min(stdHealthSalary, 650000)) : 0;
-
-  const salH = (multipliers.health > 0 && !salaryRates.isExemptStandard && stdHealthSalary > 0)
-    ? calculateInsuranceItem(stdHealthSalary, salaryRates.healthRate, salaryRates.empBurdenRatio)
+  const sal1H = (salaryRates.applyHealth && !salaryRates.isExemptStandard && stdHealthSalary1 > 0)
+    ? calculateInsuranceItem(stdHealthSalary1, salaryRates.healthRate, salaryRates.empBurdenRatio)
     : { employeeShare: 0, employerShare: 0, totalAmount: 0 };
-  const salC = (multipliers.care > 0 && !salaryRates.isExemptStandard && stdHealthSalary > 0)
-    ? calculateInsuranceItem(stdHealthSalary, salaryRates.careRate, salaryRates.empBurdenRatio)
+  const sal1C = (salaryRates.applyCare && !salaryRates.isExemptStandard && stdHealthSalary1 > 0)
+    ? calculateInsuranceItem(stdHealthSalary1, salaryRates.careRate, salaryRates.careEmpBurdenRatio)
     : { employeeShare: 0, employerShare: 0, totalAmount: 0 };
-  const salP = (multipliers.pension > 0 && !salaryRates.isExemptStandard && stdHealthSalary > 0)
-    ? calculateInsuranceItem(stdPensionSalary, salaryRates.pensionRate, 50)
+  const sal1P = (salaryRates.applyPension && !salaryRates.isExemptStandard && stdPensionSalary1 > 0)
+    ? calculateInsuranceItem(stdPensionSalary1, salaryRates.pensionRate, 50)
     : { employeeShare: 0, employerShare: 0, totalAmount: 0 };
 
-  const salHEmp = salH.employeeShare * multipliers.health, salHComp = salH.employerShare * multipliers.health, salHTot = salH.totalAmount * multipliers.health;
-  const salCEmp = salC.employeeShare * multipliers.care, salCComp = salC.employerShare * multipliers.care, salCTot = salC.totalAmount * multipliers.care;
-  const salPEmp = salP.employeeShare * multipliers.pension, salPComp = salP.employerShare * multipliers.pension, salPTot = salP.totalAmount * multipliers.pension;
+  // 2. 月末退職による2ヶ月分一括徴収時、退職当月分を独立して算出
+  let stdHealthSalary2 = 0;
+  let stdPensionSalary2 = 0;
+  let sal2H = { employeeShare: 0, employerShare: 0, totalAmount: 0 };
+  let sal2C = { employeeShare: 0, employerShare: 0, totalAmount: 0 };
+  let sal2P = { employeeShare: 0, employerShare: 0, totalAmount: 0 };
+
+  if (isTwoMonthsCollection) {
+    const rawTargetSalary = targetSal ? (Number(targetSal.monthlyAmount) || 0) : 0;
+    const hasGrade2 = targetSal?.salaryGrade !== undefined && targetSal?.salaryGrade !== null;
+    const gradeMaster2 = (rawTargetSalary > 0 && hasGrade2)
+      ? getSalaryGradeByNumber(Number(targetSal.salaryGrade))
+      : null;
+    stdHealthSalary2 = gradeMaster2 ? gradeMaster2.baseAmount : (rawTargetSalary > 0 ? rawTargetSalary : 0);
+    stdPensionSalary2 = stdHealthSalary2 > 0 ? Math.max(88000, Math.min(stdHealthSalary2, 650000)) : 0;
+
+    if (targetRates.applyHealth && !targetRates.isExemptStandard && stdHealthSalary2 > 0) {
+      sal2H = calculateInsuranceItem(stdHealthSalary2, targetRates.healthRate, targetRates.empBurdenRatio);
+    }
+    if (targetRates.applyCare && !targetRates.isExemptStandard && stdHealthSalary2 > 0) {
+      sal2C = calculateInsuranceItem(stdHealthSalary2, targetRates.careRate, targetRates.careEmpBurdenRatio);
+    }
+    if (targetRates.applyPension && !targetRates.isExemptStandard && stdPensionSalary2 > 0) {
+      sal2P = calculateInsuranceItem(stdPensionSalary2, targetRates.pensionRate, 50);
+    }
+  }
+
+  const salHEmp = sal1H.employeeShare + sal2H.employeeShare;
+  const salHComp = sal1H.employerShare + sal2H.employerShare;
+  const salHTot = sal1H.totalAmount + sal2H.totalAmount;
+
+  const salCEmp = sal1C.employeeShare + sal2C.employeeShare;
+  const salCComp = sal1C.employerShare + sal2C.employerShare;
+  const salCTot = sal1C.totalAmount + sal2C.totalAmount;
+
+  const salPEmp = sal1P.employeeShare + sal2P.employeeShare;
+  const salPComp = sal1P.employerShare + sal2P.employerShare;
+  const salPTot = sal1P.totalAmount + sal2P.totalAmount;
 
   const salEmpTotal = salHEmp + salCEmp + salPEmp;
   const salCompTotal = salHComp + salCComp + salPComp;
   const salTotal = salHTot + salCTot + salPTot;
 
+  // 3. 賞与保険料の算出
   const stdHealthBonus = currentBonus ? Number(currentBonus.healthStandardBonusAmount ?? currentBonus.standardBonusAmount ?? 0) : 0;
   const stdPensionBonus = currentBonus ? Number(currentBonus.pensionStandardBonusAmount ?? currentBonus.standardBonusAmount ?? 0) : 0;
 
@@ -398,7 +444,7 @@ export function calculateMonthlyPremiums(
     ? calculateInsuranceItem(stdHealthBonus, bonusRates.healthRate, bonusRates.empBurdenRatio)
     : { employeeShare: 0, employerShare: 0, totalAmount: 0 };
   const bC = (bonusRates.applyCare && !bonusRates.isExemptStandard && stdHealthBonus > 0)
-    ? calculateInsuranceItem(stdHealthBonus, bonusRates.careRate, bonusRates.empBurdenRatio)
+    ? calculateInsuranceItem(stdHealthBonus, bonusRates.careRate, bonusRates.careEmpBurdenRatio)
     : { employeeShare: 0, employerShare: 0, totalAmount: 0 };
   const bP = (bonusRates.applyPension && !bonusRates.isExemptStandard && stdPensionBonus > 0)
     ? calculateInsuranceItem(stdPensionBonus, bonusRates.pensionRate, 50)
@@ -415,21 +461,32 @@ export function calculateMonthlyPremiums(
   const finalCompShare = isSalary ? salCompTotal : isBonus ? bonusCompTotal : salCompTotal + bonusCompTotal;
   const finalTotal = isSalary ? salTotal : isBonus ? bonusTotal : salTotal + bonusTotal;
 
-  const effSalaryH = stdHealthSalary * multipliers.health;
-  const effSalaryC = stdHealthSalary * multipliers.care;
-  const effSalaryP = stdPensionSalary * multipliers.pension;
+  const month1AppliedH = salaryRates.applyHealth && !salaryRates.isExemptStandard && stdHealthSalary1 > 0;
+  const month2AppliedH = isTwoMonthsCollection && targetRates.applyHealth && !targetRates.isExemptStandard && stdHealthSalary2 > 0;
+  const month1AppliedC = salaryRates.applyCare && !salaryRates.isExemptStandard && stdHealthSalary1 > 0;
+  const month2AppliedC = isTwoMonthsCollection && targetRates.applyCare && !targetRates.isExemptStandard && stdHealthSalary2 > 0;
+  const month1AppliedP = salaryRates.applyPension && !salaryRates.isExemptStandard && stdPensionSalary1 > 0;
+  const month2AppliedP = isTwoMonthsCollection && targetRates.applyPension && !targetRates.isExemptStandard && stdPensionSalary2 > 0;
 
-  const dispBonusH = bonusRates.applyHealth ? stdHealthBonus : 0;
-  const dispBonusC = bonusRates.applyCare ? stdHealthBonus : 0;
-  const dispBonusP = bonusRates.applyPension ? stdPensionBonus : 0;
+  const effSalaryH = (month1AppliedH ? stdHealthSalary1 : 0) + (month2AppliedH ? stdHealthSalary2 : 0);
+  const effSalaryC = (month1AppliedC ? stdHealthSalary1 : 0) + (month2AppliedC ? stdHealthSalary2 : 0);
+  const effSalaryP = (month1AppliedP ? stdPensionSalary1 : 0) + (month2AppliedP ? stdPensionSalary2 : 0);
+
+  const dispBonusH = bonusRates.applyHealth && !bonusRates.isExemptStandard ? stdHealthBonus : 0;
+  const dispBonusC = bonusRates.applyCare && !bonusRates.isExemptStandard ? stdHealthBonus : 0;
+  const dispBonusP = bonusRates.applyPension && !bonusRates.isExemptStandard ? stdPensionBonus : 0;
 
   const healthRemun = isBonus ? dispBonusH : isSalary ? effSalaryH : (effSalaryH + dispBonusH);
   const careRemun = isBonus ? dispBonusC : isSalary ? effSalaryC : (effSalaryC + dispBonusC);
   const pensionRemun = isBonus ? dispBonusP : isSalary ? effSalaryP : (effSalaryP + dispBonusP);
 
-  const applyHealth = multipliers.health > 0 || bonusRates.applyHealth;
-  const applyCare = multipliers.care > 0 || bonusRates.applyCare;
-  const applyPension = multipliers.pension > 0 || bonusRates.applyPension;
+  const applyHealth = month1AppliedH || month2AppliedH || (bonusRates.applyHealth && !bonusRates.isExemptStandard);
+  const applyCare = month1AppliedC || month2AppliedC || (bonusRates.applyCare && !bonusRates.isExemptStandard);
+  const applyPension = month1AppliedP || month2AppliedP || (bonusRates.applyPension && !bonusRates.isExemptStandard);
+
+  const salHealthRate = month2AppliedH ? targetRates.healthRate : salaryRates.healthRate;
+  const salCareRate = month2AppliedC ? targetRates.careRate : salaryRates.careRate;
+  const salPensionRate = month2AppliedP ? targetRates.pensionRate : salaryRates.pensionRate;
 
   return {
     monthlySalary: rawMonthlySalary,
@@ -443,16 +500,16 @@ export function calculateMonthlyPremiums(
     annualCare: salCTot * 12 + bC.totalAmount,
     annualPension: salPTot * 12 + bP.totalAmount,
     breakdown: {
-      healthRate: applyHealth ? (salaryRates.healthRate || bonusRates.healthRate) : 0,
-      careRate: applyCare ? (salaryRates.careRate || bonusRates.careRate) : 0,
-      pensionRate: applyPension ? (salaryRates.pensionRate || bonusRates.pensionRate) : 0,
+      healthRate: applyHealth ? (salHealthRate || bonusRates.healthRate) : 0,
+      careRate: applyCare ? (salCareRate || bonusRates.careRate) : 0,
+      pensionRate: applyPension ? (salPensionRate || bonusRates.pensionRate) : 0,
       applyHealth,
       applyCare,
       applyPension,
       isTwoMonthsCollection,
-      healthMultiplier: multipliers.health,
-      careMultiplier: multipliers.care,
-      pensionMultiplier: multipliers.pension,
+      healthMultiplier: (month1AppliedH ? 1 : 0) + (month2AppliedH ? 1 : 0),
+      careMultiplier: (month1AppliedC ? 1 : 0) + (month2AppliedC ? 1 : 0),
+      pensionMultiplier: (month1AppliedP ? 1 : 0) + (month2AppliedP ? 1 : 0),
 
       healthRemuneration: healthRemun,
       careRemuneration: careRemun,
@@ -468,7 +525,7 @@ export function calculateMonthlyPremiums(
       pensionCompany: isSalary ? salPComp : isBonus ? bP.employerShare : salPComp + bP.employerShare,
       pensionTotal: isSalary ? salPTot : isBonus ? bP.totalAmount : salPTot + bP.totalAmount,
 
-      salaryHealthRemuneration: stdHealthSalary,
+      salaryHealthRemuneration: stdHealthSalary1,
       salaryEmployeeTotal: salEmpTotal,
       salaryCompanyTotal: salCompTotal,
       salaryTotal: salTotal,
@@ -491,7 +548,6 @@ export function calculateMonthlyPremiums(
     }
   };
 }
-
 
 export function calculateAnnualPremiums(
   emp: EmployeeView,
@@ -571,7 +627,7 @@ export function calculateAnnualPremiums(
       mHEmp = res.employeeShare * hMult; mHComp = res.employerShare * hMult; mHTot = res.totalAmount * hMult;
     }
     if (cMult > 0) {
-      const res = calculateInsuranceItem(stdHealthSalary, rates.careRate, rates.empBurdenRatio);
+      const res = calculateInsuranceItem(stdHealthSalary, rates.careRate, rates.careEmpBurdenRatio);
       mCEmp = res.employeeShare * cMult; mCComp = res.employerShare * cMult; mCTot = res.totalAmount * cMult;
     }
     if (pMult > 0) {
@@ -613,7 +669,7 @@ export function calculateAnnualPremiums(
       bHEmp += res.employeeShare; bHComp += res.employerShare; bHTot += res.totalAmount;
     }
     if (rates.applyCare && stdHealthBonus > 0) {
-      const res = calculateInsuranceItem(stdHealthBonus, rates.careRate, rates.empBurdenRatio);
+      const res = calculateInsuranceItem(stdHealthBonus, rates.careRate, rates.careEmpBurdenRatio);
       bCEmp += res.employeeShare; bCComp += res.employerShare; bCTot += res.totalAmount;
     }
     if (rates.applyPension && stdPensionBonus > 0) {
@@ -703,8 +759,10 @@ export function resolveAlertMetadata(
     notices.push('案内: 社会保障協定適用（医療保険免除）のため、健康保険料および介護保険料が免除（0円）となります。');
   }
 
+  const isTwoMonthRetire = isRetiredThisMonth && isEndOfMonthRetirement;
+
   if (activeSegment === 'salary') {
-    const effectiveSalaryAge = (isRetiredThisMonth || basis === 'currentMonth') && !salaryAgeInfo.isTransition
+    const effectiveSalaryAge = (isTwoMonthRetire || basis === 'currentMonth') && !salaryAgeInfo.isTransition
       ? targetAgeInfo
       : salaryAgeInfo;
 
@@ -719,7 +777,7 @@ export function resolveAlertMetadata(
     }
   } else {
     if (!hasBonus) {
-      const effectiveAge = (isRetiredThisMonth || basis === 'currentMonth') && !salaryAgeInfo.isTransition
+      const effectiveAge = (isTwoMonthRetire || basis === 'currentMonth') && !salaryAgeInfo.isTransition
         ? targetAgeInfo
         : salaryAgeInfo;
       isAgeTransition = effectiveAge.isTransition;
@@ -727,7 +785,7 @@ export function resolveAlertMetadata(
         appendStandardAgeNotice(notices, effectiveAge.reachedAge);
       }
     } else {
-      const isSplitTiming = (basis === 'nextMonth' && !isRetiredThisMonth);
+      const isSplitTiming = (basis === 'nextMonth' && !isTwoMonthRetire);
 
       if (isSplitTiming && !salaryAgeInfo.isTransition && targetAgeInfo.isTransition) {
         isAgeTransition = true;

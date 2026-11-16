@@ -192,7 +192,7 @@ export class EditEmployeeModalService {
       salaryGradeId: 'grade_0',
       salaryGrade: 0,
       salaryGradeDisplay: '-',
-      effectivePeriod: `${hY}/${String(hM).padStart(2, '0')} 〜 ${endY}/${String(endM).padStart(2, '0')}`,
+      effectivePeriod: `${hY}/${String(hM).padStart(2, '0')} ~ ${endY}/${String(endM).padStart(2, '0')}`,
       monthlyAmountDisplay: '0 円',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -338,15 +338,16 @@ export class EditEmployeeModalService {
     }
 
     // 2. 報酬月額の保存・削除
+    const validSalaryStandards = salaryStandardList.filter(s => (Number(s.monthlyAmount) || 0) > 0);
     const salaryRef = collection(this.firestore, 'salary_standards');
     if (selectedEmployee && employeeId) {
       const snap = await getDocs(query(salaryRef, where('organizationId', '==', currentUserUid), where('employeeId', '==', employeeId)));
-      const currentIds = new Set(salaryStandardList.map(s => s.id));
+      const currentIds = new Set(validSalaryStandards.map(s => s.id));
       for (const d of snap.docs) {
         if (!currentIds.has(d.id)) batch.delete(d.ref);
       }
     }
-    for (const s of salaryStandardList) {
+    for (const s of validSalaryStandards) {
       const ref = s.id ? doc(salaryRef, s.id) : doc(salaryRef);
       s.id = ref.id;
 

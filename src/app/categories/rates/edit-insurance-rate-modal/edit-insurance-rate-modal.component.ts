@@ -282,6 +282,12 @@ export class EditInsuranceRateModalComponent implements OnInit {
       return;
     }
 
+    if (this.selectedRate && this.selectedRate.applicableEmployeeCount > 0) {
+      if (!confirm(`この保険基準は現在 ${this.selectedRate.applicableEmployeeCount} 名の社員に適用されています。\n内容を変更すると計算結果に影響する可能性がありますが、保存してもよろしいですか？`)) {
+        return;
+      }
+    }
+
     this.isSaving = true;
     try {
       const docData: Record<string, any> = {

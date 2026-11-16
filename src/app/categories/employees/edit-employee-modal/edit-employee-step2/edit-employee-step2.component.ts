@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { InsuranceStandard, InsuranceStandardView, InsuranceExceptionType } from '../../../../models/insurance-standard.model';
 import { SalaryStandard, SalaryStandardView } from '../../../../models/salary-standard.model';
 import { BonusHistory, BonusHistoryView } from '../../../../models/bonus-history.model';
@@ -10,13 +10,13 @@ import { EditSalaryStandardModalComponent } from '../edit-salary-standard-modal/
 import { EditBonusHistoryModalComponent } from '../edit-bonus-history-modal/edit-bonus-history-modal.component';
 import { SalarySimulatorRegularComponent } from '../salary-simulator-regular/salary-simulator-regular.component';
 import { SalarySimulatorChangedComponent } from '../salary-simulator-changed/salary-simulator-changed.component';
-import { RegularDecisionResult, VarChangedDecisionResult, getVarChangedApplicationPeriod } from '../../../../utils/salary-simulator.util';
-import { calculateInsuranceEndYearMonth } from '../../../../utils/employee.util';
+import { RegularDecisionResult, VarChangedDecisionResult, getVarChangedApplicationPeriod, getPreviousYearMonth } from '../../../../utils/salary-simulator.util';
+import { calculateInsuranceEndYearMonth, formatEffectivePeriod } from '../../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-employee-step2',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, EditInsuranceStandardModalComponent, EditSalaryStandardModalComponent, EditBonusHistoryModalComponent, SalarySimulatorRegularComponent, SalarySimulatorChangedComponent],
+  imports: [CommonModule, FormsModule, EditInsuranceStandardModalComponent, EditSalaryStandardModalComponent, EditBonusHistoryModalComponent, SalarySimulatorRegularComponent, SalarySimulatorChangedComponent],
   templateUrl: './edit-employee-step2.component.html',
   styleUrl: './edit-employee-step2.component.css'
 })
@@ -84,7 +84,7 @@ export class EditEmployeeStep2Component {
     const now = new Date().toISOString();
     const updatedList = [...this.insuranceStandardList];
 
-    if (this.selectedInsuranceStandard && this.selectedInsuranceStandard.id) {
+    if (this.selectedInsuranceStandard?.id) {
       // 編集時
       const index = updatedList.findIndex(r => r.id === this.selectedInsuranceStandard?.id);
       if (index >= 0) {
@@ -124,17 +124,12 @@ export class EditEmployeeStep2Component {
     });
 
     for (let i = 0; i < sorted.length - 1; i++) {
-      const current = sorted[i];
-      const next = sorted[i + 1];
-
-      let endMonth = Number(next.effectiveStartMonth) - 1;
-      let endYear = Number(next.effectiveStartYear);
-      if (endMonth === 0) {
-        endMonth = 12;
-        endYear -= 1;
-      }
-      current.effectiveEndYear = endYear;
-      current.effectiveEndMonth = endMonth;
+      const prevEnd = getPreviousYearMonth(
+        Number(sorted[i + 1].effectiveStartYear),
+        Number(sorted[i + 1].effectiveStartMonth)
+      );
+      sorted[i].effectiveEndYear = prevEnd.year;
+      sorted[i].effectiveEndMonth = prevEnd.month;
     }
 
     if (sorted.length > 0) {
@@ -149,13 +144,7 @@ export class EditEmployeeStep2Component {
       }
     }
 
-    const descSorted = sorted.sort((a, b) => {
-      const aYM = Number(a.effectiveStartYear) * 100 + Number(a.effectiveStartMonth);
-      const bYM = Number(b.effectiveStartYear) * 100 + Number(b.effectiveStartMonth);
-      return bYM - aYM;
-    });
-
-    const updatedViews = descSorted.map(item => this.toInsuranceStandardView(item));
+    const updatedViews = sorted.reverse().map(item => this.toInsuranceStandardView(item));
     this.insuranceStandardList = updatedViews;
     this.insuranceStandardsChange.emit(updatedViews);
   }
@@ -164,13 +153,12 @@ export class EditEmployeeStep2Component {
    * InsuranceStandard を InsuranceStandardView に変換
    */
   private toInsuranceStandardView(standard: InsuranceStandard): InsuranceStandardView {
-    let effectivePeriod = `${standard.effectiveStartYear}/${String(standard.effectiveStartMonth).padStart(2, '0')}`;
-    if (standard.effectiveEndYear && standard.effectiveEndMonth) {
-      effectivePeriod += ` ~ ${standard.effectiveEndYear}/${String(standard.effectiveEndMonth).padStart(2, '0')}`;
-    } else {
-      effectivePeriod += ' ~';
-    }
-
+    let effectivePeriod = formatEffectivePeriod(
+      standard.effectiveStartYear,
+      standard.effectiveStartMonth,
+      standard.effectiveEndYear,
+      standard.effectiveEndMonth
+    );
     const exceptionTypeLabel = this.getExceptionTypeLabel(standard);
 
     return {
@@ -227,7 +215,7 @@ export class EditEmployeeStep2Component {
     const now = new Date().toISOString();
     const updatedList = [...this.salaryStandardList];
 
-    if (this.selectedSalaryStandard && this.selectedSalaryStandard.id) {
+    if (this.selectedSalaryStandard?.id) {
       // 編集時
       const index = updatedList.findIndex(r => r.id === this.selectedSalaryStandard?.id);
       if (index >= 0) {
@@ -236,9 +224,7 @@ export class EditEmployeeStep2Component {
       }
     } else {
       // 新規追加時
-      if (!salaryStandard.id) {
-        salaryStandard.id = `salary_${Date.now()}`;
-      }
+      salaryStandard.id = `salary_${Date.now()}`;
       salaryStandard.createdAt = now;
       salaryStandard.updatedAt = now;
       updatedList.push(this.toSalaryStandardView(salaryStandard));
@@ -260,7 +246,7 @@ export class EditEmployeeStep2Component {
   /**
    * 報酬月額の期間を自動更新（開始年月が新しい方の終了月を前の基準の終了月に設定）
    */
-  private updateSalaryStandardPeriods(list: SalaryStandardView[]) {
+  private updateSalaryStandardPeriods(list: SalaryStandard[]) {
     const sorted = [...list].sort((a, b) => {
       const aYM = Number(a.effectiveStartYear) * 100 + Number(a.effectiveStartMonth);
       const bYM = Number(b.effectiveStartYear) * 100 + Number(b.effectiveStartMonth);
@@ -276,13 +262,12 @@ export class EditEmployeeStep2Component {
    * SalaryStandard を SalaryStandardView に変換
    */
   private toSalaryStandardView(salary: SalaryStandard): SalaryStandardView {
-    let effectivePeriod = `${salary.effectiveStartYear}/${String(salary.effectiveStartMonth).padStart(2, '0')}`;
-    if (salary.effectiveEndYear && salary.effectiveEndMonth) {
-      effectivePeriod += ` ~ ${salary.effectiveEndYear}/${String(salary.effectiveEndMonth).padStart(2, '0')}`;
-    } else {
-      effectivePeriod += ' ~';
-    }
-
+    let effectivePeriod = formatEffectivePeriod(
+      salary.effectiveStartYear,
+      salary.effectiveStartMonth,
+      salary.effectiveEndYear,
+      salary.effectiveEndMonth
+    );
     const monthlyAmountDisplay = `${(salary.monthlyAmount ?? 0).toLocaleString('ja-JP')} 円`;
 
     return {
@@ -313,7 +298,7 @@ export class EditEmployeeStep2Component {
     const now = new Date().toISOString();
     const updatedList = [...this.bonusHistoryList];
 
-    if (this.selectedBonusHistory && this.selectedBonusHistory.id) {
+    if (this.selectedBonusHistory?.id) {
       // 編集時
       const index = updatedList.findIndex(r => r.id === this.selectedBonusHistory?.id);
       if (index >= 0) {
@@ -329,7 +314,7 @@ export class EditEmployeeStep2Component {
     }
 
     // 支給年月でソート
-    const descSorted = [...updatedList].sort((a, b) => {
+    const descSorted = updatedList.sort((a, b) => {
       const aYM = Number(a.paymentYear) * 100 + Number(a.paymentMonth);
       const bYM = Number(b.paymentYear) * 100 + Number(b.paymentMonth);
       return bYM - aYM;
@@ -386,7 +371,7 @@ export class EditEmployeeStep2Component {
     const sanitized = Math.max(0, Math.floor(Number(this.previousInsuranceAmount) || 0));
     const capped = Math.min(5730000, sanitized);
     this.previousInsuranceAmount = capped;
-    
+
     if (event) {
       (event.target as HTMLInputElement).value = String(capped);
     }
@@ -405,6 +390,9 @@ export class EditEmployeeStep2Component {
    * シミュレーター機能の反映ハンドラー
    * ======================================================================
    */
+  private getNextYearMonth(year: number, month: number): { year: number; month: number } {
+    return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  }
 
   /**
    * 定時決定を9月履歴に反映
@@ -412,25 +400,54 @@ export class EditEmployeeStep2Component {
   onRegularDecisionApplied(result: RegularDecisionResult) {
     if (!result || !result.canApply) return;
 
-    // 1. 直前の有効履歴（8月以前にまたがるもの）を判定年度の08月に自動クローズ
-    const prevYM = result.targetStartYear * 100 + 8; // simulationYear/08
-    const updatedList: SalaryStandard[] = this.salaryStandardList.map(item => {
-      const copy = { ...item };
-      const startYM = Number(copy.effectiveStartYear) * 100 + Number(copy.effectiveStartMonth);
-      const endYM = (copy.effectiveEndYear && copy.effectiveEndMonth)
-        ? Number(copy.effectiveEndYear) * 100 + Number(copy.effectiveEndMonth)
+    const newStartYM = result.targetStartYear * 100 + result.targetStartMonth; // simulationYear/09
+    const newEndYM = result.targetEndYear * 100 + result.targetEndMonth;
+    const prevYM = getPreviousYearMonth(result.targetStartYear, result.targetStartMonth); // simulationYear/08
+    const nextYM = this.getNextYearMonth(result.targetEndYear, result.targetEndMonth);
+    const now = new Date().toISOString();
+
+    const updatedList: SalaryStandard[] = [];
+
+    for (const item of this.salaryStandardList) {
+      const startYM = Number(item.effectiveStartYear) * 100 + Number(item.effectiveStartMonth);
+      const endYM = (item.effectiveEndYear && item.effectiveEndMonth)
+        ? Number(item.effectiveEndYear) * 100 + Number(item.effectiveEndMonth)
         : 999999;
 
-      if (startYM <= prevYM && endYM > prevYM) {
-        copy.effectiveEndYear = result.targetStartYear;
-        copy.effectiveEndMonth = 8;
+      // A. 完全に定時決定期間外 -> そのまま維持
+      if (endYM < newStartYM || startYM > newEndYM) {
+        updatedList.push({ ...item });
+        continue;
       }
-      return copy;
-    });
 
-    // 2. 定時決定の新履歴（9月〜退職月または翌年8月）を作成
-    const now = new Date().toISOString();
-    const existingRef = this.salaryStandardList[0]; // 組織IDや作成者情報を既存レコードから継承
+      // B. 定時決定期間内に完全に包含される履歴 -> 上書き破棄
+      if (startYM >= newStartYM && endYM <= newEndYM) {
+        continue;
+      }
+
+      // C. 9月前からまたがっている履歴 -> 終了月を8月に自動クローズ
+      if (startYM < newStartYM && endYM >= newStartYM) {
+        updatedList.push({
+          ...item,
+          effectiveEndYear: prevYM.year,
+          effectiveEndMonth: prevYM.month,
+          updatedAt: now
+        });
+        continue;
+      }
+
+      // D. 9月以降から始まり定時決定終了月より後ろへ続く履歴 -> 開始月を翌月に繰り下げ
+      if (startYM <= newEndYM && endYM > newEndYM) {
+        updatedList.push({
+          ...item,
+          effectiveStartYear: nextYM.year,
+          effectiveStartMonth: nextYM.month,
+          updatedAt: now
+        });
+      }
+    }
+
+    const existingRef = this.salaryStandardList[0];
 
     const newRecord: SalaryStandard = {
       id: `salary_${Date.now()}`,
@@ -451,9 +468,7 @@ export class EditEmployeeStep2Component {
     };
 
     updatedList.push(newRecord);
-
-    // 3. 全体期間更新・自動降順ソート・View変換および親コンポーネント通知
-    this.updateSalaryStandardPeriods(updatedList.map(item => this.toSalaryStandardView(item)));
+    this.updateSalaryStandardPeriods(updatedList);
     alert(
       `${result.simulationYear}年度 定時決定を給与履歴に反映しました。\n` +
       `（適用期間: ${result.targetStartYear}/09 〜 ${result.targetEndYear}/${String(result.targetEndMonth).padStart(2, '0')}）`
@@ -476,22 +491,9 @@ export class EditEmployeeStep2Component {
 
     const newStartYM = period.startYear * 100 + period.startMonth;
     const newEndYM = period.endYear * 100 + period.endMonth;
-
-    // 改定開始月の直前月（YYYY, MM）
-    let prevMonth = period.startMonth - 1;
-    let prevYear = period.startYear;
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear -= 1;
-    }
-
-    // 改定終了月の翌月（YYYY, MM）
-    let nextMonth = period.endMonth + 1;
-    let nextYear = period.endYear;
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    }
+    const prevYM = getPreviousYearMonth(period.startYear, period.startMonth);
+    const nextYM = this.getNextYearMonth(period.endYear, period.endMonth);
+    const now = new Date().toISOString();
 
     const updatedList: SalaryStandard[] = [];
 
@@ -502,64 +504,40 @@ export class EditEmployeeStep2Component {
         ? Number(item.effectiveEndYear) * 100 + Number(item.effectiveEndMonth)
         : 999999;
 
-      // A. 完全に改定期間外（前または後）の履歴 -> そのまま残す
+      // A. 完全に改定期間外 -> そのまま残す
       if (endYM < newStartYM || startYM > newEndYM) {
         updatedList.push({ ...item });
         continue;
       }
 
-      // B. 改定期間内に完全にすっぽり収まる履歴 -> 上書きされるため破棄（追加しない）
+      // B. 改定期間内に完全にすっぽり収まる履歴 -> 上書き破棄
       if (startYM >= newStartYM && endYM <= newEndYM) {
         continue;
       }
 
-      // C. 改定期間をまたいで前後両方に突き抜けている履歴 -> 前と後ろの2つに分割
-      if (startYM < newStartYM && endYM > newEndYM) {
-        // 前半部分
-        updatedList.push({
-          ...item,
-          effectiveEndYear: prevYear,
-          effectiveEndMonth: prevMonth,
-          updatedAt: new Date().toISOString()
-        });
-        // 後半部分
-        updatedList.push({
-          ...item,
-          id: `salary_${Date.now()}_split`,
-          effectiveStartYear: nextYear,
-          effectiveStartMonth: nextMonth,
-          updatedAt: new Date().toISOString()
-        });
-        continue;
-      }
-
-      // D. 前からまたがっている履歴 -> 終了月を改定直前月に短縮
+      // C. 前からまたがっている履歴 -> 終了月を改定直前月に短縮（後ろへの分割・復帰は行わない）
       if (startYM < newStartYM && endYM >= newStartYM) {
         updatedList.push({
           ...item,
-          effectiveEndYear: prevYear,
-          effectiveEndMonth: prevMonth,
-          updatedAt: new Date().toISOString()
+          effectiveEndYear: prevYM.year,
+          effectiveEndMonth: prevYM.month,
+          updatedAt: now
         });
         continue;
       }
 
-      // E. 後ろへまたがっている履歴 -> 開始月を改定終了翌月に繰り下げ
+      // D. 後ろへまたがっている履歴 -> 開始月を改定終了翌月に繰り下げ
       if (startYM <= newEndYM && endYM > newEndYM) {
         updatedList.push({
           ...item,
-          effectiveStartYear: nextYear,
-          effectiveStartMonth: nextMonth,
-          updatedAt: new Date().toISOString()
+          effectiveStartYear: nextYM.year,
+          effectiveStartMonth: nextYM.month,
+          updatedAt: now
         });
-        continue;
       }
     }
 
-    // 3. 随時改定の新規レコードを作成して追加
-    const now = new Date().toISOString();
     const existingRef = this.salaryStandardList[0];
-
     const newRecord: SalaryStandard = {
       id: `salary_${Date.now()}`,
       employeeId: existingRef?.employeeId || '',
@@ -579,9 +557,7 @@ export class EditEmployeeStep2Component {
     };
 
     updatedList.push(newRecord);
-
-    // 4. ソートおよび親への変更通知
-    this.updateSalaryStandardPeriods(updatedList.map(item => this.toSalaryStandardView(item)));
+    this.updateSalaryStandardPeriods(updatedList);
 
     alert(
       `随時改定を給与履歴に反映しました。\n` +

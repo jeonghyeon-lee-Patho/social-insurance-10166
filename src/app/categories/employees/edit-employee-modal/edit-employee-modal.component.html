@@ -187,30 +187,26 @@
           <div class="form-field-content">
             <div class="date-select-group">
               <select class="form-control select-year" [(ngModel)]="selectedHireYear"
-                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()">
                 <option value="">年を選択</option>
                 <option *ngFor="let y of hireYears" [value]="y">{{ y }}年</option>
               </select>
 
               <select class="form-control select-month" [(ngModel)]="selectedHireMonth"
-                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()">
                 <option value="">月</option>
                 <option *ngFor="let m of months" [value]="m">{{ m }}月</option>
               </select>
 
               <select class="form-control select-day" [(ngModel)]="selectedHireDay"
-                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()" [disabled]="isHireDateLocked">
+                [ngModelOptions]="{standalone: true}" (change)="onHireDatePartChange()">
                 <option value="">日</option>
                 <option *ngFor="let d of hireDays" [value]="d">{{ d }}日</option>
               </select>
             </div>
 
-            <div *ngIf="isHireDateLocked" class="error-message">
-              ※ 入社年月日は変更できません。変更が必要な場合は社員情報を削除後、新規登録してください。
-            </div>
-
             <div
-              *ngIf="!isHireDateLocked && (form.get('hireDate')?.touched || form.get('hireDate')?.dirty) && getErrorMessage('hireDate')"
+              *ngIf="(form.get('hireDate')?.touched || form.get('hireDate')?.dirty) && getErrorMessage('hireDate')"
               class="error-message">
               {{ getErrorMessage('hireDate') }}
             </div>
@@ -266,6 +262,10 @@
                 (input)="sanitizeEmployeeIncome()" /> 
               <span class="unit-text">円</span>
             </div>
+          </div>
+          <div *ngIf="dependents.length > 0 && (!employeeAnnualIncome || employeeAnnualIncome <= 0)"
+            class="error-message">
+            ※ 被扶養者を登録する場合は、生計維持要件の判定のため「社員（本人）の年間収入見込（1円以上）」を入力してください。
           </div>
 
           <div *ngIf="dependents.length === 0 && !isEditingDependent" class="dependent-empty">
@@ -361,7 +361,7 @@
             <label>年収見込</label>
             <div class="dep-input-with-unit">
               <input type="number" class="dep-input" [(ngModel)]="editingDependent.expectedAnnualIncome"
-                [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
+                [ngModelOptions]="{standalone: true}" min="0" step="1" placeholder="0"
                 (input)="sanitizeDepNumber('expectedAnnualIncome')" />
               <span class="unit-text">円</span>
             </div>

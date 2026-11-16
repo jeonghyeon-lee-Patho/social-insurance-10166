@@ -131,6 +131,10 @@ export class RatesComponent implements OnInit, OnDestroy {
           employee: 50,
           employer: 50
         },
+        burdenRatioCare: {
+          employee: 50,
+          employer: 50
+        },
         applicableEmployeeCount: 0,
 
         createdAt: now,

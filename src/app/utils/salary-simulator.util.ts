@@ -3,8 +3,9 @@
  * 社会保険（厚生年金・健康保険）の標準報酬月額決定ロジック
  */
 
-import { SALARY_GRADE_MASTER } from '../data/salary-grade-master.data';
+import { determineSalaryGrade, getSalaryGradeByNumber } from '../data/salary-grade-master.data';
 import { calculateInsuranceEndYearMonth } from './employee.util';
+import { SalaryStandard } from '../models/salary-standard.model';
 
 /**
  * 定時決定シミュレーション結果
@@ -52,54 +53,6 @@ export interface VarChangedDecisionResult {
   gradeDifference: number;
   canApply: boolean;
   warningMessages: string[];
-  overwriteTargets?: Array<{
-    id: string;
-    currentPeriod: string;
-  }>;
-}
-
-/**
- * 退職日に基づく社会保険資格喪失年月（最終適用年月）を計算
- * ・末日退職：退職当月まで適用（翌月1日資格喪失）
- * ・月中退職：退職前月まで適用（翌日資格喪失）
- */
-export function getInsuranceEndYearMonthByRetirement(retirementDate: string): { year: number; month: number } {
-  const [rY, rM, rD] = retirementDate.split('-').map(Number);
-  const lastDay = new Date(rY, rM, 0).getDate();
-  if (rD === lastDay) {
-    return { year: rY, month: rM };
-  } else {
-    let eM = rM - 1;
-    let eY = rY;
-    if (eM === 0) {
-      eM = 12;
-      eY -= 1;
-    }
-    return { year: eY, month: eM };
-  }
-}
-
-/**
- * 報酬額から対応する等級を取得
- */
-export function determineSalaryGradeFromAmount(monthlyAmount: number): number {
-  for (const grade of SALARY_GRADE_MASTER) {
-    if (grade.maximumSalary === null || grade.maximumSalary === undefined) {
-      return grade.grade;
-    }
-    if (monthlyAmount >= grade.minimumSalary && monthlyAmount < grade.maximumSalary) {
-      return grade.grade;
-    }
-  }
-  return SALARY_GRADE_MASTER[51].grade;
-}
-
-/**
- * 等級番号から表示名を取得
- */
-export function getGradeDisplayName(grade: number): string {
-  const gradeMaster = SALARY_GRADE_MASTER.find(g => g.grade === grade);
-  return gradeMaster?.displayName || `${grade}等級`;
 }
 
 /**
@@ -140,12 +93,6 @@ export function simulateRegularDecision(
   april: { amount: number; daysSufficient: boolean },
   may: { amount: number; daysSufficient: boolean },
   june: { amount: number; daysSufficient: boolean },
-  salaryHistories: Array<{
-    effectiveStartYear: number;
-    effectiveStartMonth: number;
-    effectiveEndYear?: number;
-    effectiveEndMonth?: number;
-  }> = [],
   retirementDate: string = '',
   hireDate: string = ''
 ): RegularDecisionResult {
@@ -158,25 +105,19 @@ export function simulateRegularDecision(
   const warningMessages: string[] = [];
   let canCalculate = true;
 
-  let eligibleMonths = [4, 5, 6];
+  const eligibleMonths = getEligibleMonthsForRegularDecision(simulationYear, hireDate);
 
   if (hireDate) {
-    const [hY, hM, hD] = hireDate.split('-').map(Number);
+    const [hY, hM] = hireDate.split('-').map(Number);
 
     if (hY > simulationYear) {
       warningMessages.push(`入社年月日（${hY}年${hM}月）以前の年度は定時決定の対象外です。`);
       canCalculate = false;
-    } else if (hY === simulationYear) {
-      if (hM >= 6) {
-        warningMessages.push(
-          `${simulationYear}年6月1日以降に入社した社員は、当年度の定時決定の対象外（翌年8月まで入社時等級を維持）です。`
-        );
-        canCalculate = false;
-      } else if (hM === 5 && hD > 1) {
-        eligibleMonths = [6];
-      } else if ((hM === 4 && hD > 1) || (hM === 5 && hD === 1)) {
-        eligibleMonths = [5, 6];
-      }
+    } else if (hY === simulationYear && hM >= 6) {
+      warningMessages.push(
+        `${simulationYear}年6月1日以降に入社した社員は、当年度の定時決定の対象外（翌年8月まで入社時等級を維持）です。`
+      );
+      canCalculate = false;
     }
   }
 
@@ -192,70 +133,54 @@ export function simulateRegularDecision(
 
   // 2. 充足月の報酬額チェック (0円以下入力の防止)
   const hasInvalidAmount = sufficientMonths.some(
-    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) < 0
+    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) <= 0
   );
   if (hasInvalidAmount) {
-    warningMessages.push('充足月の中に報酬月額が未入力またはマイナスの月があります。');
+    warningMessages.push('充足月の中に報酬月額が未入力または0円以下の月があります。');
     canCalculate = false;
   }
 
-  // 3. 当該年度9月〜翌年8月間の既存履歴重複チェック
+  // 3. 定時決定の適用開始・終了年月の決定（退職日を考慮）
   const rangeStartYM = simulationYear * 100 + 9;
   const rangeEndYM = (simulationYear + 1) * 100 + 8;
 
-  const hasOverlapHistory = salaryHistories.some(history => {
-    const histStartYM = Number(history.effectiveStartYear) * 100 + Number(history.effectiveStartMonth);
-    const histEndYM = (history.effectiveEndYear && history.effectiveEndMonth)
-      ? Number(history.effectiveEndYear) * 100 + Number(history.effectiveEndMonth)
-      : 999999;
-
-    return histStartYM <= rangeEndYM && histEndYM >= rangeStartYM;
-  });
-
-  if (hasOverlapHistory) {
-    warningMessages.push(
-      `${simulationYear}年9月〜${simulationYear + 1}年8月の期間に報酬履歴がすでに存在するため、定時決定シミュレーターは利用できません。`
-    );
-    canCalculate = false;
-  }
-
-  // 4. 定時決定の適用開始・終了年月の決定（退職日を考慮）
   const targetStartYear = simulationYear;
   const targetStartMonth = 9;
   let targetEndYear = simulationYear + 1;
   let targetEndMonth = 8;
 
   if (retirementDate) {
-    const endYM = getInsuranceEndYearMonthByRetirement(retirementDate);
-    const endValue = endYM.year * 100 + endYM.month;
+    const endYM = calculateInsuranceEndYearMonth(retirementDate, hireDate);
+    if (endYM) {
+      const endValue = endYM.year * 100 + endYM.month;
 
-    if (endValue < rangeStartYM) {
-      warningMessages.push(
-        `退職に伴う資格喪失（${endYM.year}年${endYM.month}月）が${simulationYear}年9月以前のため、定時決定の対象外です。`
-      );
-      canCalculate = false;
-    } else if (endValue < rangeEndYM) {
-      targetEndYear = endYM.year;
-      targetEndMonth = endYM.month;
+      if (endValue < rangeStartYM) {
+        warningMessages.push(
+          `退職に伴う資格喪失（${endYM.year}年${endYM.month}月）が${simulationYear}年9月以前のため、定時決定の対象外です。`
+        );
+        canCalculate = false;
+      } else if (endValue < rangeEndYM) {
+        targetEndYear = endYM.year;
+        targetEndMonth = endYM.month;
+      }
     }
   }
 
-  // 5. 平均額および等級の計算
+  // 4. 平均額および等級の計算
   let averageAmount = 0;
   if (canCalculate && sufficientMonths.length > 0) {
     const sum = sufficientMonths.reduce((acc, cur) => acc + Number(cur.amount), 0);
     averageAmount = Math.floor(sum / sufficientMonths.length);
   }
 
-  const calculatedGrade = canCalculate ? determineSalaryGradeFromAmount(averageAmount) : 0;
-  const calculatedGradeDisplay = canCalculate ? getGradeDisplayName(calculatedGrade) : '';
+  const gradeMaster = canCalculate ? determineSalaryGrade(averageAmount) : null;
 
   return {
     simulationYear,
     months,
     averageAmount,
-    calculatedGrade,
-    calculatedGradeDisplay,
+    calculatedGrade: gradeMaster?.grade ?? 0,
+    calculatedGradeDisplay: gradeMaster?.displayName ?? '',
     sufficientMonthsCount: sufficientMonths.length,
     canApply: canCalculate && warningMessages.length === 0,
     warningMessages,
@@ -292,7 +217,9 @@ export function simulateVarChangedDecisionNormal(
   month3: { amount: number; year: number; month: number; daysSufficient: boolean },
   hasFixedWageChange: boolean = true,
   noRerequisitionIn3Months: boolean = true,
-  changeDirection: 'increase' | 'decrease' = 'increase'
+  changeDirection: 'increase' | 'decrease' = 'increase',
+  retirementDate: string = '',
+  hireDate: string = ''
 ): VarChangedDecisionResult {
   const months = [month1, month2, month3];
   const sufficientMonths = months.filter(m => m.daysSufficient);
@@ -317,10 +244,10 @@ export function simulateVarChangedDecisionNormal(
   }
 
   const hasInvalidAmount = sufficientMonths.some(
-    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) < 0
+    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) <= 0
   );
   if (hasInvalidAmount) {
-    warningMessages.push('対象月の中に報酬月額が未入力またはマイナスの月があります。');
+    warningMessages.push('対象月の中に報酬月額が未入力または0円以下の月があります。');
     canCalculate = false;
   }
 
@@ -330,8 +257,11 @@ export function simulateVarChangedDecisionNormal(
     averageAmount = Math.floor(amounts.reduce((a, b) => a + b, 0) / amounts.length);
   }
 
-  const calculatedGrade = canCalculate ? determineSalaryGradeFromAmount(averageAmount) : previousGrade;
-  const calculatedGradeDisplay = getGradeDisplayName(calculatedGrade);
+  const gradeMaster = canCalculate ? determineSalaryGrade(averageAmount) : null;
+  const calculatedGrade = gradeMaster ? gradeMaster.grade : previousGrade;
+  const calculatedGradeDisplay = gradeMaster
+    ? gradeMaster.displayName
+    : (getSalaryGradeByNumber(previousGrade)?.displayName || `${previousGrade}等級`);
   const gradeDifference = calculatedGrade - previousGrade;
 
   let sufficientGradeDiff = false;
@@ -344,6 +274,17 @@ export function simulateVarChangedDecisionNormal(
       warningMessages.push('2等級以上の変動がないため随時改定を行うことができません。');
       canCalculate = false;
     }
+  }
+
+  const period = getVarChangedApplicationPeriod(changeStartYear, changeStartMonth, retirementDate, hireDate);
+  const startVal = period.startYear * 100 + period.startMonth;
+  const endVal = period.endYear * 100 + period.endMonth;
+
+  if (endVal < startVal) {
+    warningMessages.push(
+      `退職に伴う資格喪失（${period.endYear}年${period.endMonth}月）が改定適用開始月（${period.startYear}年${period.startMonth}月）以前のため、随時改定の対象外です。`
+    );
+    canCalculate = false;
   }
 
   return {
@@ -375,7 +316,9 @@ export function simulateVarChangedDecisionMaternityReturn(
   previousAmount: number,
   month1: { amount: number; year: number; month: number; daysSufficient: boolean },
   month2: { amount: number; year: number; month: number; daysSufficient: boolean },
-  month3: { amount: number; year: number; month: number; daysSufficient: boolean }
+  month3: { amount: number; year: number; month: number; daysSufficient: boolean },
+  retirementDate: string = '',
+  hireDate: string = ''
 ): VarChangedDecisionResult {
   const months = [month1, month2, month3];
   const sufficientMonths = months.filter(m => m.daysSufficient);
@@ -389,10 +332,10 @@ export function simulateVarChangedDecisionMaternityReturn(
   }
 
   const hasInvalidAmount = sufficientMonths.some(
-    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) < 0
+    m => m.amount === null || m.amount === undefined || isNaN(Number(m.amount)) || Number(m.amount) <= 0
   );
   if (hasInvalidAmount) {
-    warningMessages.push('充足月の中に報酬月額が未入力またはマイナスの月があります。');
+    warningMessages.push('充足月の中に報酬月額が未入力または0円以下の月があります。');
     canCalculate = false;
   }
 
@@ -402,9 +345,15 @@ export function simulateVarChangedDecisionMaternityReturn(
     averageAmount = Math.floor(amounts.reduce((a, b) => a + b, 0) / amounts.length);
   }
 
-  const calculatedGrade = canCalculate ? determineSalaryGradeFromAmount(averageAmount) : previousGrade;
-  const calculatedGradeDisplay = getGradeDisplayName(calculatedGrade);
-  const gradeDifference = calculatedGrade - previousGrade;
+  const gradeMaster = canCalculate ? determineSalaryGrade(averageAmount) : null;
+  const calculatedGrade = gradeMaster ? gradeMaster.grade : previousGrade;
+  const calculatedGradeDisplay = gradeMaster
+    ? gradeMaster.displayName
+    : (getSalaryGradeByNumber(previousGrade)?.displayName || `${previousGrade}等級`);
+  
+  const effectivePreviousGrade = Math.min(50, Math.max(1, previousGrade));
+  const effectiveCalculatedGrade = Math.min(50, Math.max(1, calculatedGrade));
+  const gradeDifference = effectiveCalculatedGrade - effectivePreviousGrade;
 
   let sufficientGradeDiff = false;
   if (canCalculate) {
@@ -414,6 +363,17 @@ export function simulateVarChangedDecisionMaternityReturn(
       warningMessages.push('1等級以上の低下がないため育休復帰特例による随時改定を行うことができません。');
       canCalculate = false;
     }
+  }
+
+  const period = getVarChangedApplicationPeriod(changeStartYear, changeStartMonth, retirementDate, hireDate);
+  const startVal = period.startYear * 100 + period.startMonth;
+  const endVal = period.endYear * 100 + period.endMonth;
+
+  if (endVal < startVal) {
+    warningMessages.push(
+      `退職に伴う資格喪失（${period.endYear}年${period.endMonth}月）が改定適用開始月（${period.startYear}年${period.startMonth}月）以前のため、随時改定の対象外です。`
+    );
+    canCalculate = false;
   }
 
   return {
@@ -434,76 +394,20 @@ export function simulateVarChangedDecisionMaternityReturn(
   };
 }
 
-export function hasPreviousDataAtMonth(
-  salaryHistories: Array<{
-    effectiveStartYear: number;
-    effectiveStartMonth: number;
-    effectiveEndYear?: number;
-    effectiveEndMonth?: number;
-    monthlyAmount: number;
-  }>,
-  year: number,
-  month: number
-): boolean {
+/**
+ * 指定年月に適用中の給与履歴レコードを取得
+ */
+export function findSalaryHistoryAtMonth(
+  salaryHistories: SalaryStandard[], year: number, month: number
+): SalaryStandard | undefined {
   const targetYM = year * 100 + month;
-  for (const history of salaryHistories) {
-    const startYM = history.effectiveStartYear * 100 + history.effectiveStartMonth;
-    const endYM = history.effectiveEndYear
-      ? history.effectiveEndYear * 100 + history.effectiveEndMonth!
+  return salaryHistories.find(history => {
+    const startYM = Number(history.effectiveStartYear) * 100 + Number(history.effectiveStartMonth);
+    const endYM = (history.effectiveEndYear && history.effectiveEndMonth)
+      ? Number(history.effectiveEndYear) * 100 + Number(history.effectiveEndMonth)
       : 999999;
-    if (targetYM >= startYM && targetYM <= endYM) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function getPreviousAmountAtMonth(
-  salaryHistories: Array<{
-    effectiveStartYear: number;
-    effectiveStartMonth: number;
-    effectiveEndYear?: number;
-    effectiveEndMonth?: number;
-    monthlyAmount: number;
-  }>,
-  year: number,
-  month: number
-): number {
-  const targetYM = year * 100 + month;
-  for (const history of salaryHistories) {
-    const startYM = history.effectiveStartYear * 100 + history.effectiveStartMonth;
-    const endYM = history.effectiveEndYear
-      ? history.effectiveEndYear * 100 + history.effectiveEndMonth!
-      : 999999;
-    if (targetYM >= startYM && targetYM <= endYM) {
-      return history.monthlyAmount;
-    }
-  }
-  return 0;
-}
-
-export function getPreviousGradeAtMonth(
-  salaryHistories: Array<{
-    effectiveStartYear: number;
-    effectiveStartMonth: number;
-    effectiveEndYear?: number;
-    effectiveEndMonth?: number;
-    salaryGrade: number;
-  }>,
-  year: number,
-  month: number
-): number {
-  const targetYM = year * 100 + month;
-  for (const history of salaryHistories) {
-    const startYM = history.effectiveStartYear * 100 + history.effectiveStartMonth;
-    const endYM = history.effectiveEndYear
-      ? history.effectiveEndYear * 100 + history.effectiveEndMonth!
-      : 999999;
-    if (targetYM >= startYM && targetYM <= endYM) {
-      return history.salaryGrade;
-    }
-  }
-  return 0;
+    return targetYM >= startYM && targetYM <= endYM;
+  });
 }
 
 /**
@@ -539,50 +443,58 @@ export function getVarChangedApplicationPeriod(
       }
     }
   }
-
   return { startYear, startMonth, endYear, endMonth };
 }
 
-export function detectOverwriteTargets(
-  salaryHistories: Array<{
-    id: string;
-    effectiveStartYear: number;
-    effectiveStartMonth: number;
-    effectiveEndYear?: number;
-    effectiveEndMonth?: number;
-  }>,
-  changeStartYear: number,
-  changeStartMonth: number,
-  retirementDate: string = '',
-  hireDate: string = ''
-): Array<{ id: string; currentPeriod: string }> {
-  const period = getVarChangedApplicationPeriod(changeStartYear, changeStartMonth, retirementDate, hireDate);
-  const targetStartYM = period.startYear * 100 + period.startMonth;
-  const targetEndYM = period.endYear * 100 + period.endMonth;
-
-  const targets: Array<{ id: string; currentPeriod: string }> = [];
-
-  for (const h of salaryHistories) {
+/**
+ * 期間重複する既存給与履歴を抽出（共通ヘルパー）
+ */
+function findOverlappingHistories(
+  salaryHistories: SalaryStandard[],
+  targetStartYM: number,
+  targetEndYM: number
+): SalaryStandard[] {
+  return salaryHistories.filter(h => {
     const hStartYM = Number(h.effectiveStartYear) * 100 + Number(h.effectiveStartMonth);
     const hEndYM = (h.effectiveEndYear && h.effectiveEndMonth)
       ? Number(h.effectiveEndYear) * 100 + Number(h.effectiveEndMonth)
       : 999999;
-
-    // 期間重複判定: (hStartYM <= targetEndYM) && (hEndYM >= targetStartYM)
-    if (hStartYM <= targetEndYM && hEndYM >= targetStartYM) {
-      let currentPeriod = `${h.effectiveStartYear}/${String(h.effectiveStartMonth).padStart(2, '0')}`;
-      if (h.effectiveEndYear && h.effectiveEndMonth) {
-        currentPeriod += ` 〜 ${h.effectiveEndYear}/${String(h.effectiveEndMonth).padStart(2, '0')}`;
-      } else {
-        currentPeriod += ' 〜';
-      }
-      targets.push({ id: h.id, currentPeriod });
-    }
-  }
-
-  return targets;
+    return hStartYM <= targetEndYM && hEndYM >= targetStartYM;
+  });
 }
 
+/**
+ * 定時決定の上書き対象履歴を検出
+ */
+export function detectRegularOverwriteTargets(
+  salaryHistories: SalaryStandard[],
+  targetStartYear: number,
+  targetStartMonth: number,
+  targetEndYear: number,
+  targetEndMonth: number
+): SalaryStandard[] {
+  return findOverlappingHistories(
+    salaryHistories,
+    targetStartYear * 100 + targetStartMonth,
+    targetEndYear * 100 + targetEndMonth
+  );
+}
 
-
+/**
+ * 随時改定の上書き対象履歴を検出
+ */
+export function detectOverwriteTargets(
+  salaryHistories: SalaryStandard[],
+  changeStartYear: number,
+  changeStartMonth: number,
+  retirementDate: string = '',
+  hireDate: string = ''
+): SalaryStandard[] {
+  const period = getVarChangedApplicationPeriod(changeStartYear, changeStartMonth, retirementDate, hireDate);
+  return findOverlappingHistories(
+    salaryHistories,
+    period.startYear * 100 + period.startMonth,
+    period.endYear * 100 + period.endMonth
+  );
+}
 

@@ -11,4 +11,5 @@ export const routes: Routes = [
   { path: 'employees', component: EmployeesComponent, canActivate: [authGuard] },
   { path: 'rates', component: RatesComponent, canActivate: [authGuard] },
   { path: 'premium', component: PremiumComponent, canActivate: [authGuard] },
+  { path: '**', redirectTo: 'login' }
 ];
