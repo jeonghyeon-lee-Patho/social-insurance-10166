@@ -174,18 +174,20 @@ export class PremiumComponent implements OnInit, OnDestroy {
     try {
       const ratesQuery = query(collection(this.firestore, 'insurance_rates'), where('organizationId', '==', orgId));
       const snapshot = await getDocs(ratesQuery);
-      const standards = new Set<string>();
+      const masters: InsuranceRateMaster[] = [];
       this.insuranceRateMastersMap = {};
 
       snapshot.docs.forEach(d => {
         const data = { id: d.id, ...d.data() } as InsuranceRateMaster;
         if (data.name) {
-          standards.add(data.name);
+          masters.push(data);
           this.insuranceRateMastersMap[data.id] = data;
           this.insuranceRateMastersMap[data.name] = data;
         }
       });
-      this.availableInsuranceStandards = Array.from(standards).sort();
+
+      masters.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      this.availableInsuranceStandards = masters.map(m => m.name);
     } catch (e) {
       console.error('保険基準マスタ読み込みエラー:', e);
     }
@@ -209,10 +211,6 @@ export class PremiumComponent implements OnInit, OnDestroy {
     return result;
   }
 
-
-  /**
-   * UI条件（年月・タブ・徴収基準）が変更された際に、キャッシュから即座に再計算する
-   */
   private recalculateDisplay() {
     if (!this.isDataLoaded) return;
     this.buildTargetEmployees(this.cachedInsMap, this.cachedSalMap, this.cachedBonusMap);
@@ -373,25 +371,37 @@ export class PremiumComponent implements OnInit, OnDestroy {
    */
   private sortEmployeeList(list: PremiumEmployeeView[], key: SortKey, direction: SortDirection): PremiumEmployeeView[] {
     const factor = direction === 'asc' ? 1 : -1;
+    const tieBreaker = (a: PremiumEmployeeView, b: PremiumEmployeeView) =>
+      (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true });
 
     return [...list].sort((a, b) => {
+      let diff = 0;
+
       switch (key) {
         case 'employeeNumber':
-          return (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true }) * factor;
+          diff = (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '', 'ja', { numeric: true });
+          break;
         case 'name':
-          return (a.nameKana ?? '').localeCompare(b.nameKana ?? '', 'ja') * factor;
+          diff = (a.nameKana ?? '').localeCompare(b.nameKana ?? '', 'ja');
+          break;
         case 'age': {
-          const ageDiff = (a.age ?? 0) - (b.age ?? 0);
-          if (ageDiff !== 0) return ageDiff * factor;
-          return (new Date(a.dateOfBirth).getTime() - new Date(b.dateOfBirth).getTime()) * factor;
+          const timeA = a.dateOfBirth ? new Date(a.dateOfBirth).getTime() : 0;
+          const timeB = b.dateOfBirth ? new Date(b.dateOfBirth).getTime() : 0;
+          diff = timeB - timeA;
+          break;
         }
-        case 'hireDate':
-          return (new Date(a.hireDate).getTime() - new Date(b.hireDate).getTime()) * factor;
+        case 'hireDate': {
+          const timeA = a.hireDate ? new Date(a.hireDate).getTime() : 0;
+          const timeB = b.hireDate ? new Date(b.hireDate).getTime() : 0;
+          diff = timeA - timeB;
+          break;
+        } 
         case 'totalPremium':
-          return ((a.totalPremium ?? 0) - (b.totalPremium ?? 0)) * factor;
-        default:
-          return 0;
+          diff = (a.totalPremium ?? 0) - (b.totalPremium ?? 0);
+          break;
       }
+      if (diff !== 0) return diff * factor;
+      return tieBreaker(a, b);
     });
   }
 

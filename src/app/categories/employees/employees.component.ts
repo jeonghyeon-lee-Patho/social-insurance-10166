@@ -149,8 +149,7 @@ export class EmployeesComponent implements OnInit, OnDestroy {
    * 検索テキスト変更時のハンドラー
    */
   onSearchInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.searchText = input.value;
+    this.searchText = (event.target as HTMLInputElement).value;
     this.applyFiltersAndSort();
   }
 
