@@ -119,7 +119,14 @@
 
         <!-- 右側: 徴収対象人数バッジ -->
         <div class="employee-count-badge">
-          表示中: <strong>{{ filteredEmployees.length }}</strong> / {{ currentEligibleCount }}名
+          <div class="count-help-wrapper" tabindex="0">
+            <span class="count-help-icon">?</span>
+            <div class="count-help-tooltip">
+              分子：一覧に表示中の社員数 ／ 分母：該当期間の徴収対象社員総数<br>
+              ※「社員情報」で給与・賞与履歴が未登録の社員（賞与タブでは未支給者）は一覧に表示されません。
+            </div>
+          </div>
+          <span>表示中: <strong>{{ filteredEmployees.length }}</strong> / {{ currentEligibleCount }}名</span>
         </div>
       </div>
     </div>

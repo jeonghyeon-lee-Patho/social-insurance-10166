@@ -283,16 +283,76 @@
 }
 
 .employee-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   color: #64748b;
   white-space: nowrap;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .employee-count-badge strong {
   font-size: 14px;
   font-weight: 700;
   color: #2563eb;
+}
+
+.count-help-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
+
+.count-help-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  transition: all 0.15s ease;
+}
+
+.count-help-wrapper:hover .count-help-icon,
+.count-help-wrapper:focus .count-help-icon {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+.count-help-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 320px;
+  padding: 9px 11px;
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.count-help-wrapper:hover .count-help-tooltip,
+.count-help-wrapper:focus .count-help-tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* ===== テーブルスクロール領域 ===== */
@@ -389,14 +449,14 @@
 /* 7列テーブル用（総保険料・賞与保険料） */
 .w-7-emp-no   { width: 12%; text-align: left; }
 .w-7-name     { width: 15%; text-align: left; }
-.w-7-standard { width: 21%; text-align: left; }
-.w-7-curr     { width: 13%; text-align: right; }
+.w-7-standard { width: 17%; text-align: left; }
+.w-7-curr     { width: 14%; text-align: right; }
 
 /* 8列テーブル用（給与保険料） */
-.w-8-emp-no   { width: 11%; text-align: left; }
-.w-8-name     { width: 14%; text-align: left; }
-.w-8-standard { width: 20%; text-align: left; }
-.w-8-salary   { width: 11%; text-align: right; }
+.w-8-emp-no   { width: 12%; text-align: left; }
+.w-8-name     { width: 15%; text-align: left; }
+.w-8-standard { width: 17%; text-align: left; }
+.w-8-salary   { width: 12%; text-align: right; }
 .w-8-grade    { width: 11%; text-align: center; }
 .w-8-curr     { width: 11%; text-align: right; }
 .w-8-total    { width: 11%; text-align: right; }
