@@ -222,7 +222,40 @@
   font-size: 14px;
   font-weight: 600;
   color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
+}
+
+.section-title-row .section-title {
+  margin-bottom: 0;
+}
+
+.rate-version-tag {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #0369a1;
+  background-color: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.kyokai-edit-note {
+  margin: 0 0 8px 0;
+  padding: 8px 10px;
+  background-color: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.4;
 }
 
 /* 読み取り専用フィールド */

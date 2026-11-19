@@ -1,8 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { User } from '@angular/fire/auth';
-import { Firestore, collection, doc, setDoc, deleteField } from '@angular/fire/firestore';
+import { Firestore, collection, doc, setDoc, deleteField, query, where, getDocs, writeBatch } from '@angular/fire/firestore';
 import { InsuranceRateMaster, InsuranceType, InsuranceRegion } from '../../../models/insurance-rate.model';
 import {
   KYOKAI_CONSTANTS,
@@ -10,6 +10,7 @@ import {
   REGION_PREFECTURE_MAP,
   getKyokaiRateByPrefecture,
   REGION_DISPLAY_MAP,
+  KYOKAI_RATE_VERSION_LABEL,
 } from '../../../data/insurance-rates.data';
 
 @Component({
@@ -31,9 +32,10 @@ export class EditInsuranceRateModalComponent implements OnInit {
 
   InsuranceType = InsuranceType;
   InsuranceRegion = InsuranceRegion;
-  REGION_DISPLAY_MAP = REGION_DISPLAY_MAP;
+  REGION_DISPLAY_MAP = REGION_DISPLAY_MAP;  
   regions: { value: InsuranceRegion; label: string }[] = [];
   prefectures: string[] = [];
+  readonly kyokaiRateVersionLabel = KYOKAI_RATE_VERSION_LABEL;
 
   private firestore = inject(Firestore);
   private fb = inject(FormBuilder);
@@ -267,8 +269,19 @@ export class EditInsuranceRateModalComponent implements OnInit {
 
     const formValue = this.form.getRawValue();
     const inputName = formValue.name.trim();
+
+    if (!inputName) {
+      alert('基準名称を入力してください。（空白のみは不可）');
+      return;
+    }
+
     const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
     const targetNormalized = normalize(inputName);
+
+    if (['対象外', '未設定'].includes(targetNormalized)) {
+      alert(`「${inputName}」はシステム予約語のため基準名称として使用できません。`);
+      return;
+    }
 
     const isDuplicate = this.existingRates.some(rate => {
       if (this.selectedRate && rate.id === this.selectedRate.id) {
@@ -323,6 +336,22 @@ export class EditInsuranceRateModalComponent implements OnInit {
         }
         const docRef = doc(this.firestore, 'insurance_rates', this.selectedRate.id);
         await setDoc(docRef, docData, { merge: true });
+
+        if (this.selectedRate.name !== inputName) {
+          const standardsQ = query(
+            collection(this.firestore, 'insurance_standards'),
+            where('organizationId', '==', this.currentUser.uid),
+            where('insuranceRateMasterId', '==', this.selectedRate.id)
+          );
+          const standardsSnap = await getDocs(standardsQ);
+          if (!standardsSnap.empty) {
+            const batch = writeBatch(this.firestore);
+            standardsSnap.docs.forEach(d => {
+              batch.update(d.ref, { insuranceRateMasterName: inputName });
+            });
+            await batch.commit();
+          }
+        }
       } else {
         docData['applicableEmployeeCount'] = 0;
         docData['createdAt'] = new Date().toISOString();

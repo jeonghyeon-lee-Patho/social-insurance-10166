@@ -2,33 +2,83 @@
   width: 100%;
   min-height: 100%;
   background-color: #f8fafc;
-  padding: 20px 20px; 
+  padding: 20px 24px;
   box-sizing: border-box;
 }
 
-.content-wrapper {
+.rates-top-bar {
+  max-width: 1400px;
+  margin: 0 auto 14px auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rate-version-pill {
+  padding: 3px 10px;
+  background-color: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rate-version-pill strong {
+  color: #0f172a;
+}
+
+.guide-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
+
+.guide-trigger {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2563eb;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s;
+}
+
+.guide-trigger:hover {
+  background-color: #dbeafe;
+}
+
+.guide-tooltip-box {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 440px;
+  max-width: calc(100vw - 48px);
+  padding: 10px 12px;
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.guide-tooltip-wrapper:hover .guide-tooltip-box,
+.guide-tooltip-wrapper:focus .guide-tooltip-box {
+  visibility: visible;
+  opacity: 1;
+}
+
+.loading-spinner {
   max-width: 1400px;
   margin: 0 auto;
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 20px 30px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.page-header {
-  margin-bottom: 15px;
-}  
-
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  color: #0f172a;
-  border-bottom: 2px solid #2563eb;
-  padding-bottom: 10px;
-}
-
-/* ローディング */
-.loading-spinner {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -36,21 +86,22 @@
   color: #475569;
 }
 
-/* グリッドレイアウト（幅350px固定で自動折り返し） */
 .rates-grid {
+  max-width: 1400px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, 350px);
   gap: 16px;
   justify-content: start;
 }
 
-/* カード共通スタイル */
 .rate-card {
   width: 350px;
   box-sizing: border-box;
-  background-color: #f8fafc;
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;

@@ -1,80 +1,85 @@
 /**
  * 保険基準マスタデータ
- * 協会けんぽの地域別健康保険料率（2024年度）
- * 出典：全国健康保険協会 (https://www.kyokaihoken.or.jp/)
+ * 協会けんぽの地域別健康保険料率（2026年度 / 令和8年3月分〜）
+ * 出典：全国健康保険協会 (https://www.kyoukaikenpo.or.jp/)
  */
 
 import { InsuranceRegion, KyokaiRateData } from '../models/insurance-rate.model';
 
 /**
- * 協会けんぽの地域別料率データ（全国）
+ * 協会けんぽマスタデータの適用年度表記（料率更新時に手動変更）
+ */
+export const KYOKAI_RATE_VERSION_LABEL = '2026年度（令和8年3月分〜）';
+
+/**
+ * 協会けんぽの地域別料率データ（全国47都道府県）
  * 労使折半（各50%）固定
- * 介護保険料率：全国共通 1.60%
+ * 介護保険料率：全国共通 1.62%
  * 厚生年金保険料率：全国共通 18.30%
  */
 export const KYOKAI_RATES_DATA: KyokaiRateData[] = [
   // 北海道
-  { region: InsuranceRegion.HOKKAIDO, prefecture: '北海道', healthInsuranceRate: 10.21, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.HOKKAIDO, prefecture: '北海道', healthInsuranceRate: 10.28, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
-  // 北海道・東北エリア
-  { region: InsuranceRegion.TOHOKU, prefecture: '青森県', healthInsuranceRate: 9.49, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.TOHOKU, prefecture: '岩手県', healthInsuranceRate: 9.79, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.TOHOKU, prefecture: '宮城県', healthInsuranceRate: 9.70, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.TOHOKU, prefecture: '秋田県', healthInsuranceRate: 10.04, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.TOHOKU, prefecture: '山形県', healthInsuranceRate: 9.97, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.TOHOKU, prefecture: '福島県', healthInsuranceRate: 10.11, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  // 東北エリア
+  { region: InsuranceRegion.TOHOKU, prefecture: '青森県', healthInsuranceRate: 9.85, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.TOHOKU, prefecture: '岩手県', healthInsuranceRate: 9.51, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.TOHOKU, prefecture: '宮城県', healthInsuranceRate: 10.10, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.TOHOKU, prefecture: '秋田県', healthInsuranceRate: 10.01, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.TOHOKU, prefecture: '山形県', healthInsuranceRate: 9.75, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.TOHOKU, prefecture: '福島県', healthInsuranceRate: 9.50, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 関東エリア
-  { region: InsuranceRegion.KANTO, prefecture: '茨城県', healthInsuranceRate: 9.84, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '栃木県', healthInsuranceRate: 9.72, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '群馬県', healthInsuranceRate: 9.84, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '埼玉県', healthInsuranceRate: 9.97, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '千葉県', healthInsuranceRate: 10.00, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '東京都', healthInsuranceRate: 9.98, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANTO, prefecture: '神奈川県', healthInsuranceRate: 10.10, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '茨城県', healthInsuranceRate: 9.52, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '栃木県', healthInsuranceRate: 9.82, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '群馬県', healthInsuranceRate: 9.68, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '埼玉県', healthInsuranceRate: 9.67, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '千葉県', healthInsuranceRate: 9.73, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '東京都', healthInsuranceRate: 9.85, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANTO, prefecture: '神奈川県', healthInsuranceRate: 9.92, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 中部エリア
-  { region: InsuranceRegion.CHUBU, prefecture: '新潟県', healthInsuranceRate: 9.85, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '富山県', healthInsuranceRate: 9.61, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '石川県', healthInsuranceRate: 9.71, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '福井県', healthInsuranceRate: 9.46, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '山梨県', healthInsuranceRate: 10.03, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '長野県', healthInsuranceRate: 9.61, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '岐阜県', healthInsuranceRate: 9.72, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '静岡県', healthInsuranceRate: 9.85, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '愛知県', healthInsuranceRate: 10.00, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUBU, prefecture: '三重県', healthInsuranceRate: 9.88, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '新潟県', healthInsuranceRate: 9.21, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '富山県', healthInsuranceRate: 9.59, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '石川県', healthInsuranceRate: 9.70, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '福井県', healthInsuranceRate: 9.71, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '山梨県', healthInsuranceRate: 9.55, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '長野県', healthInsuranceRate: 9.63, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '岐阜県', healthInsuranceRate: 9.80, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '静岡県', healthInsuranceRate: 9.61, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '愛知県', healthInsuranceRate: 9.93, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUBU, prefecture: '三重県', healthInsuranceRate: 9.77, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 近畿エリア
-  { region: InsuranceRegion.KANSAI, prefecture: '滋賀県', healthInsuranceRate: 9.81, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANSAI, prefecture: '京都府', healthInsuranceRate: 9.78, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANSAI, prefecture: '大阪府', healthInsuranceRate: 10.34, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANSAI, prefecture: '兵庫県', healthInsuranceRate: 10.03, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANSAI, prefecture: '奈良県', healthInsuranceRate: 9.81, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KANSAI, prefecture: '和歌山県', healthInsuranceRate: 10.03, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '滋賀県', healthInsuranceRate: 9.88, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '京都府', healthInsuranceRate: 9.89, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '大阪府', healthInsuranceRate: 10.13, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '兵庫県', healthInsuranceRate: 10.12, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '奈良県', healthInsuranceRate: 9.91, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KANSAI, prefecture: '和歌山県', healthInsuranceRate: 10.06, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 中国エリア
-  { region: InsuranceRegion.CHUGOKU, prefecture: '鳥取県', healthInsuranceRate: 9.82, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUGOKU, prefecture: '島根県', healthInsuranceRate: 9.93, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUGOKU, prefecture: '岡山県', healthInsuranceRate: 9.97, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUGOKU, prefecture: '広島県', healthInsuranceRate: 9.96, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.CHUGOKU, prefecture: '山口県', healthInsuranceRate: 10.02, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUGOKU, prefecture: '鳥取県', healthInsuranceRate: 9.86, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUGOKU, prefecture: '島根県', healthInsuranceRate: 9.94, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUGOKU, prefecture: '岡山県', healthInsuranceRate: 10.05, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUGOKU, prefecture: '広島県', healthInsuranceRate: 9.78, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.CHUGOKU, prefecture: '山口県', healthInsuranceRate: 10.15, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 四国エリア
-  { region: InsuranceRegion.SHIKOKU, prefecture: '徳島県', healthInsuranceRate: 10.22, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.SHIKOKU, prefecture: '香川県', healthInsuranceRate: 10.20, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.SHIKOKU, prefecture: '愛媛県', healthInsuranceRate: 10.04, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.SHIKOKU, prefecture: '高知県', healthInsuranceRate: 10.21, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.SHIKOKU, prefecture: '徳島県', healthInsuranceRate: 10.24, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.SHIKOKU, prefecture: '香川県', healthInsuranceRate: 10.02, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.SHIKOKU, prefecture: '愛媛県', healthInsuranceRate: 9.98, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.SHIKOKU, prefecture: '高知県', healthInsuranceRate: 10.05, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
 
   // 九州エリア
-  { region: InsuranceRegion.KYUSHU, prefecture: '福岡県', healthInsuranceRate: 10.07, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '佐賀県', healthInsuranceRate: 10.05, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '長崎県', healthInsuranceRate: 10.21, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '熊本県', healthInsuranceRate: 10.03, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '大分県', healthInsuranceRate: 10.16, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '宮崎県', healthInsuranceRate: 10.11, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '鹿児島県', healthInsuranceRate: 10.24, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
-  { region: InsuranceRegion.KYUSHU, prefecture: '沖縄県', healthInsuranceRate: 9.52, careInsuranceRate: 1.60, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 }
+  { region: InsuranceRegion.KYUSHU, prefecture: '福岡県', healthInsuranceRate: 10.11, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '佐賀県', healthInsuranceRate: 10.55, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '長崎県', healthInsuranceRate: 10.06, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '熊本県', healthInsuranceRate: 10.08, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '大分県', healthInsuranceRate: 10.08, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '宮崎県', healthInsuranceRate: 9.77, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '鹿児島県', healthInsuranceRate: 10.13, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 },
+  { region: InsuranceRegion.KYUSHU, prefecture: '沖縄県', healthInsuranceRate: 9.44, careInsuranceRate: 1.62, pensionInsuranceRate: 18.30, employerBurden: 50, employeeBurden: 50 }
 ];
 
 /**
@@ -109,7 +114,7 @@ export const REGION_DISPLAY_MAP: Record<InsuranceRegion, string> = {
  * 協会けんぽの定数値
  */
 export const KYOKAI_CONSTANTS = {
-  careInsuranceRate: 1.60,         // 全国共通
+  careInsuranceRate: 1.62,         // 全国共通（2026年度）
   pensionInsuranceRate: 18.30,     // 全国共通
   employerBurden: 50,              // 労使折半
   employeeBurden: 50               // 労使折半

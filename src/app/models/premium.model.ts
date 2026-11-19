@@ -5,18 +5,13 @@ import { EmployeeView } from "./employee.model";
  * アコーディオン詳細展開用の法定内訳モデル
  */
 export interface InsuranceDetailBreakdown {
-  healthRate: number;
-  careRate: number;
-  pensionRate: number;
-
+  insuranceStandardName: string;
+  healthRate: number | string;
+  careRate: number | string;
+  pensionRate: number | string;
   applyHealth: boolean;
   applyCare: boolean;
   applyPension: boolean;
-  isTwoMonthsCollection: boolean;
-
-  healthMultiplier?: number;
-  careMultiplier?: number;
-  pensionMultiplier?: number;
 
   healthRemuneration: number;
   careRemuneration: number;
@@ -31,25 +26,7 @@ export interface InsuranceDetailBreakdown {
   pensionCompany: number;
   pensionTotal: number;
   
-  salaryHealthRemuneration: number;
-  salaryEmployeeTotal: number;
-  salaryCompanyTotal: number;
   salaryTotal: number;
-
-  bonusHealthRemuneration: number;
-  bonusCareRemuneration: number;
-  bonusPensionRemuneration: number;
-  bonusHealthEmployee: number;
-  bonusHealthCompany: number;
-  bonusHealthTotal: number;
-  bonusCareEmployee: number;
-  bonusCareCompany: number;
-  bonusCareTotal: number;
-  bonusPensionEmployee: number;
-  bonusPensionCompany: number;
-  bonusPensionTotal: number;
-  bonusEmployeeTotal: number;
-  bonusCompanyTotal: number;
   bonusTotal: number;
 }
 

@@ -249,24 +249,20 @@ export class PremiumComponent implements OnInit, OnDestroy {
 
       const eligibility = checkEmployeeEligibility(
         emp, targetYear, targetMonth, targetYM, empAttrYM, fiscalStartYM, fiscalEndYM,
-        salMap, bonusMap, empBasis, this.activeTab, this.activeSegment
+        salMap, bonusMap, insMap, empBasis, this.activeTab, this.activeSegment
       );
 
       if (eligibility.isEligibleForDenominator) eligibleCount++;
       if (!eligibility.shouldDisplayInTable) continue;
 
       if (this.activeTab === 'annual') {
-        const resolvedRates = resolveRatesAndExemptions(
-          emp, empAttrYM, empAttrYear, empAttrMonth, insMap, this.insuranceRateMastersMap
-        );
-
         const annualCalc = calculateAnnualPremiums(
           emp, fiscalYearNum, salMap, bonusMap, insMap, this.insuranceRateMastersMap, 'currentMonth'
         );
 
         result.push({
           ...emp,
-          insuranceStandardName: resolvedRates.masterName,
+          insuranceStandardName: '-',
           totalRemuneration: 0,
           monthlySalary: 0,
           salaryGrade: '-',
@@ -298,9 +294,8 @@ export class PremiumComponent implements OnInit, OnDestroy {
           eligibility.isEndOfMonthRetirement
         );
 
-        const targetRates = isTwoMonthsCollection
-          ? resolveRatesAndExemptions(emp, targetYM, targetYear, targetMonth, insMap, this.insuranceRateMastersMap)
-          : resolvedSalaryRates;
+        const targetRates = isTwoMonthsCollection ? resolvedBonusRates : resolvedSalaryRates;
+        const isSalaryPeriodEligible = (targetYM >= eligibility.collStartYM && targetYM <= eligibility.collEndYM);
 
         const calculation = calculateMonthlyPremiums(
           eligibility.currentSal,
@@ -310,31 +305,45 @@ export class PremiumComponent implements OnInit, OnDestroy {
           targetRates,
           resolvedBonusRates,
           isTwoMonthsCollection,
+          isSalaryPeriodEligible,
           this.activeSegment
         );
 
-        const hasBonusThisMonth = !!eligibility.currentBonus;
+        const hasSalary = !!eligibility.currentSal ||
+          resolvedSalaryRates.isExplicitExempt ||
+          (isTwoMonthsCollection && (!!eligibility.targetSal || targetRates.isExplicitExempt));
 
-        const alertMeta = resolveAlertMetadata(
-          emp, targetYM, eligibility.collStartYM, eligibility.collEndYM,
-          eligibility.isEndOfMonthRetirement, resolvedSalaryRates.currentIns,
-          empAttrYear, empAttrMonth, empBasis, this.activeSegment, hasBonusThisMonth
-        );
-
-        const displayStandardName = (isTwoMonthsCollection && resolvedSalaryRates.isExemptStandard && !targetRates.isExemptStandard)
-          ? targetRates.masterName
-          : resolvedSalaryRates.masterName;
+        const alertMeta = resolveAlertMetadata({
+          emp,
+          targetYM,
+          attrYear: empAttrYear,
+          attrMonth: empAttrMonth,
+          collStartYM: eligibility.collStartYM,
+          collEndYM: eligibility.collEndYM,
+          isEndOfMonthRetirement: eligibility.isEndOfMonthRetirement,
+          basis: empBasis,
+          activeSegment: this.activeSegment,
+          isSalaryPeriodEligible,
+          hasSalary,
+          hasBonus: !!eligibility.currentBonus,
+          salaryIns: resolvedSalaryRates.currentIns,
+          targetIns: isTwoMonthsCollection ? targetRates.currentIns : undefined,
+          bonusIns: resolvedBonusRates.currentIns,
+          salaryMasterName: resolvedSalaryRates.masterName,
+          targetMasterName: isTwoMonthsCollection ? targetRates.masterName : undefined,
+          bonusMasterName: resolvedBonusRates.masterName
+        });
 
         result.push({
           ...emp,
-          insuranceStandardName: displayStandardName,
+          insuranceStandardName: calculation.tableInsuranceStandardName,
           totalRemuneration: calculation.totalRemuneration,
           monthlySalary: calculation.monthlySalary,
           salaryGrade: calculation.salaryGrade,
           bonusAmount: calculation.bonusAmount,
-          annualHealth: calculation.annualHealth,
-          annualCare: calculation.annualCare,
-          annualPension: calculation.annualPension,
+          annualHealth: 0,
+          annualCare: 0,
+          annualPension: 0,
           employeeShare: calculation.finalEmpShare,
           companyShare: calculation.finalCompShare,
           totalPremium: calculation.finalTotal,
@@ -358,7 +367,9 @@ export class PremiumComponent implements OnInit, OnDestroy {
     let filtered = filterBySearch(this.activeTargetEmployees, this.searchText) as PremiumEmployeeView[];
 
     if (this.activeTab === 'monthly' && this.selectedInsuranceStandard) {
-      filtered = filtered.filter(e => e.insuranceStandardName === this.selectedInsuranceStandard);
+      filtered = filtered.filter(e =>
+        e.insuranceStandardName === this.selectedInsuranceStandard
+      );
     }
 
     filtered = this.sortEmployeeList(filtered, this.sortKey, this.sortDirection);
@@ -395,7 +406,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
           const timeB = b.hireDate ? new Date(b.hireDate).getTime() : 0;
           diff = timeA - timeB;
           break;
-        } 
+        }
         case 'totalPremium':
           diff = (a.totalPremium ?? 0) - (b.totalPremium ?? 0);
           break;

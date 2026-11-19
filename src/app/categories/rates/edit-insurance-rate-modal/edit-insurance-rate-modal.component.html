@@ -45,8 +45,14 @@
 
       <!-- 協会けんぽ設定 -->
       <div *ngIf="form.get('type')?.value === InsuranceType.KYOKAI" class="form-section">
-        <div class="section-title">▼ 協会けんぽ設定 (地域連動)</div>
+        <div class="section-title-row">
+          <span class="section-title">▼ 協会けんぽ設定 (地域連動)</span>
+          <span class="rate-version-tag">参照データ: {{ kyokaiRateVersionLabel }}</span>
+        </div>
 
+        <div class="kyokai-edit-note">
+          ※ 協会けんぽを選択した場合、上記参照データの最新料率が自動適用されます。過去年度の料率を新規登録・復元したい場合は「組合健保」を選択して手動で入力してください。
+        </div>
         <div class="form-row">
           <!-- エリア選択 -->
           <div class="form-group">
@@ -206,4 +212,3 @@
     </div>
   </div>
 </div>
-

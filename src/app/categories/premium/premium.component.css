@@ -3,48 +3,21 @@
   width: 100%;
   height: 100%;
   background-color: #f8fafc;
-  padding: 20px;
+  padding: 20px 24px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-.content-wrapper {
-  max-width: 1600px;
-  width: 100%;
-  max-height: 100%;
-  min-height: 300px;
-  margin: 0 auto;
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 20px 30px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
   overflow-y: hidden;
 }
 
-.page-header {
-  width: 100%;
-  min-width: 800px;
-  margin: 0 auto 15px auto;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  color: #0f172a;
-  border-bottom: 2px solid #2563eb;
-  padding-bottom: 10px;
-}
-
 .table-card {
-  min-width: 800px;
+  max-width: 1600px;
+  min-width: 880px;
   width: 100%;
-  flex: 1;
+  height: auto;
+  max-height: 100%;
+  flex: 0 1 auto;
   min-height: 0;
   box-sizing: border-box;
   margin: 0 auto;
@@ -262,7 +235,7 @@
 }
 
 .search-box {
-  width: 180px;
+  width: 200px;
   flex-shrink: 0;
 }
 
@@ -348,7 +321,7 @@
 /* ===== テーブル本体（固定レイアウト＆省略記法） ===== */
 .premium-table {
   width: 100%;
-  min-width: 700px;
+  min-width: 850px;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
@@ -414,19 +387,19 @@
 .text-bold { font-weight: 600; color: #0f172a; }
 
 /* 7列テーブル用（総保険料・賞与保険料） */
-.w-7-emp-no   { width: 14%; text-align: left; }
-.w-7-name     { width: 18%; text-align: left; }
-.w-7-standard { width: 16%; text-align: left; }
+.w-7-emp-no   { width: 12%; text-align: left; }
+.w-7-name     { width: 15%; text-align: left; }
+.w-7-standard { width: 21%; text-align: left; }
 .w-7-curr     { width: 13%; text-align: right; }
 
 /* 8列テーブル用（給与保険料） */
-.w-8-emp-no   { width: 12%; text-align: left; }
-.w-8-name     { width: 16%; text-align: left; }
-.w-8-standard { width: 14%; text-align: left; }
-.w-8-salary   { width: 12%; text-align: right; }
-.w-8-grade    { width: 12%; text-align: center; }
+.w-8-emp-no   { width: 11%; text-align: left; }
+.w-8-name     { width: 14%; text-align: left; }
+.w-8-standard { width: 20%; text-align: left; }
+.w-8-salary   { width: 11%; text-align: right; }
+.w-8-grade    { width: 11%; text-align: center; }
 .w-8-curr     { width: 11%; text-align: right; }
-.w-8-total    { width: 12%; text-align: right; }
+.w-8-total    { width: 11%; text-align: right; }
 
 /* 8列テーブル用（年間統合） */
 .w-ann-emp-no { width: 12%; text-align: left; }
@@ -480,14 +453,27 @@
   border-left: 3px solid #3b82f6;
   font-size: 12px;
   color: #1e40af;
+  white-space: pre-line;
+  line-height: 1.6;
 }
 
 .detail-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
   margin-top: 6px;
 }
+
+/* 月別詳細テーブル（6列）用カラム幅 */
+.detail-col-item   { width: 16%; }
+.detail-col-rate   { width: 18%; }
+.detail-col-remun  { width: 18%; }
+.detail-col-amount { width: 16%; }
+
+/* 年間詳細テーブル（4列）用カラム幅 */
+.detail-ann-item   { width: 28%; }
+.detail-ann-amount { width: 24%; }
 
 .detail-table th {
   background-color: #f1f5f9;
@@ -578,10 +564,5 @@
 
 .premium-table tfoot td.text-center {
   text-align: center;
-}
-
-.detail-notice {
-  white-space: pre-line;
-  line-height: 1.6;
 }
 

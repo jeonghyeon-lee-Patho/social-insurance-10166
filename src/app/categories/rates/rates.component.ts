@@ -5,7 +5,7 @@ import { Auth, authState, User } from '@angular/fire/auth';
 import { Firestore, collection, query, where, getDocs, doc, deleteDoc, setDoc } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import { InsuranceRateMaster, InsuranceRegion, InsuranceType } from '../../models/insurance-rate.model';
-import { getKyokaiRateByPrefecture, REGION_DISPLAY_MAP } from '../../data/insurance-rates.data';
+import { getKyokaiRateByPrefecture, REGION_DISPLAY_MAP, KYOKAI_RATE_VERSION_LABEL } from '../../data/insurance-rates.data';
 import { EditInsuranceRateModalComponent } from './edit-insurance-rate-modal/edit-insurance-rate-modal.component';
 
 @Component({
@@ -30,6 +30,7 @@ export class RatesComponent implements OnInit, OnDestroy {
   // 定数
   InsuranceType = InsuranceType;
   REGION_DISPLAY_MAP = REGION_DISPLAY_MAP;
+  readonly kyokaiRateVersionLabel = KYOKAI_RATE_VERSION_LABEL;
 
   ngOnInit() {
     this.authSubscription = authState(this.auth).subscribe(user => {
@@ -123,8 +124,8 @@ export class RatesComponent implements OnInit, OnDestroy {
         region: InsuranceRegion.KANTO,
         prefecture: '東京都',
         rates: {
-          healthInsurance: tokyoRate ? tokyoRate.healthInsuranceRate : 9.98,
-          careInsurance: tokyoRate ? tokyoRate.careInsuranceRate : 1.60,
+          healthInsurance: tokyoRate ? tokyoRate.healthInsuranceRate : 9.85,
+          careInsurance: tokyoRate ? tokyoRate.careInsuranceRate : 1.62,
           pensionInsurance: tokyoRate ? tokyoRate.pensionInsuranceRate : 18.30
         },
         burdenRatio: {

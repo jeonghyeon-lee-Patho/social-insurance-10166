@@ -14,12 +14,23 @@ export function checkSalaryHistoryGaps(
     effectiveEndYear?: number;
     effectiveEndMonth?: number;
     monthlyAmount?: number;
-  }>
+  }>,
+  ///////
+  insuranceStandards: Array<{
+    effectiveStartYear: number;
+    effectiveStartMonth: number;
+    effectiveEndYear?: number;
+    effectiveEndMonth?: number;
+    insuranceRateMasterId?: string;
+    insuranceRateMasterName?: string;
+  }> = [],
+  systemStartYM?: number | null
 ): boolean {
   if (!hireDate) return false;
 
   const [hY, hM] = hireDate.split('-').map(Number);
   const hireYM = hY * 100 + hM;
+  const startYM = (systemStartYM && systemStartYM > 0) ? Math.max(hireYM, systemStartYM) : hireYM;
 
   const today = new Date();
   const todayYM = today.getFullYear() * 100 + (today.getMonth() + 1);
@@ -38,32 +49,39 @@ export function checkSalaryHistoryGaps(
       endYM = Math.min(todayYM, retireYM);
     }
   }
-
   if (endYM < hireYM) return false;
 
-  // 3. 履歴が1件も存在しない場合は漏れあり
-  if (!salaryStandards || salaryStandards.length === 0) {
-    return true;
-  }
-
-  // 4. 入社月から終了月まで1ヶ月ずつ網羅性をチェック
-  let currY = hY;
-  let currM = hM;
+  // 3. 判定開始月から終了月まで1ヶ月ずつ網羅性をチェック
+  let currY = Math.floor(startYM / 100);
+  let currM = startYM % 100;
 
   while (currY * 100 + currM <= endYM) {
     const targetYM = currY * 100 + currM;
 
-    const isCovered = salaryStandards.some(s => {
-      const hasValidAmount = (Number(s.monthlyAmount) || 0) > 0;
-      const sStart = Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth);
-      const sEnd = (s.effectiveEndYear && s.effectiveEndMonth)
-        ? Number(s.effectiveEndYear) * 100 + Number(s.effectiveEndMonth)
+    // 対象外（N/A）期間に該当する月は給与履歴の必須チェックから除外
+    const isOutOfScope = insuranceStandards.some(ins => {
+      const isExempt = ins.insuranceRateMasterId === 'N/A' || ins.insuranceRateMasterName === '対象外';
+      if (!isExempt) return false;
+      const iStart = Number(ins.effectiveStartYear) * 100 + Number(ins.effectiveStartMonth);
+      const iEnd = (ins.effectiveEndYear && ins.effectiveEndMonth)
+        ? Number(ins.effectiveEndYear) * 100 + Number(ins.effectiveEndMonth)
         : 999999;
-      return hasValidAmount && sStart <= targetYM && targetYM <= sEnd;
+      return iStart <= targetYM && targetYM <= iEnd;
     });
 
-    if (!isCovered) {
-      return true;
+    if (!isOutOfScope) {
+      const isCovered = (salaryStandards || []).some(s => {
+        const hasValidAmount = (Number(s.monthlyAmount) || 0) > 0;
+        const sStart = Number(s.effectiveStartYear) * 100 + Number(s.effectiveStartMonth);
+        const sEnd = (s.effectiveEndYear && s.effectiveEndMonth)
+          ? Number(s.effectiveEndYear) * 100 + Number(s.effectiveEndMonth)
+          : 999999;
+        return hasValidAmount && sStart <= targetYM && targetYM <= sEnd;
+      });
+
+      if (!isCovered) {
+        return true;
+      }
     }
 
     currM++;
@@ -157,12 +175,12 @@ export function checkDependentEligibility(
   }
 
   const isPension3Eligible =
-  dep.relationship === 'spouse' &&
-  isHealthEligible &&
-  age >= 20 &&
-  age < 60 &&
-  empAge < 70;
-  
+    dep.relationship === 'spouse' &&
+    isHealthEligible &&
+    age >= 20 &&
+    age < 60 &&
+    empAge < 70;
+
   return { isHealthEligible, isPension3Eligible };
 }
 
@@ -373,4 +391,46 @@ export function formatEffectivePeriod(startYear: number, startMonth: number, end
   return `${startStr} ~`;
 }
 
+/**
+ * 入社年度の健康保険 標準賞与額累計（前職通算含む）および573万円上限超過判定
+ */
+export function calculateHireFiscalYearHealthBonusTotal(
+  hireDate: string | undefined,
+  hasPreviousInsurance: boolean,
+  previousInsuranceAmount: number,
+  bonusHistories: Array<{
+    paymentYear: number;
+    paymentMonth: number;
+    healthStandardBonusAmount?: number;
+    standardBonusAmount?: number;
+  }> = []
+): { fiscalYear: number | null; total: number; isExceeded: boolean } {
+  if (!hireDate) {
+    return { fiscalYear: null, total: 0, isExceeded: false };
+  }
 
+  const [hY, hM] = hireDate.split('-').map(Number);
+  if (!hY || !hM) {
+    return { fiscalYear: null, total: 0, isExceeded: false };
+  }
+
+  const hireFY = hM >= 4 ? hY : hY - 1;
+  let total = hasPreviousInsurance ? (Number(previousInsuranceAmount) || 0) : 0;
+
+  for (const b of bonusHistories || []) {
+    const pY = Number(b.paymentYear);
+    const pM = Number(b.paymentMonth);
+    if (!pY || !pM) continue;
+
+    const bFY = pM >= 4 ? pY : pY - 1;
+    if (bFY === hireFY) {
+      total += Number(b.healthStandardBonusAmount ?? b.standardBonusAmount ?? 0);
+    }
+  }
+
+  return {
+    fiscalYear: hireFY,
+    total,
+    isExceeded: total > 5730000
+  };
+}

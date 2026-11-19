@@ -9,7 +9,7 @@ import { BonusHistoryView } from '../../../models/bonus-history.model';
 import { InsuranceRateMaster } from '../../../models/insurance-rate.model';
 import {
   calculateAge, checkDependentEligibility, checkSalaryHistoryGaps, getDaysList, getTodayString, getRelationshipLabel,
-  katakanaValidator, kanjiValidator, romajiValidator, resolveDateParts, employmentInsuranceValidator
+  katakanaValidator, kanjiValidator, romajiValidator, resolveDateParts, employmentInsuranceValidator, calculateHireFiscalYearHealthBonusTotal
 } from '../../../utils/employee.util';
 import { EditEmployeeStep2Component } from './edit-employee-step2/edit-employee-step2.component';
 import { calculateInsuranceEndYearMonth } from '../../../utils/employee.util';
@@ -25,6 +25,7 @@ import { EditEmployeeModalService } from './employee-modal.service';
 export class EditEmployeeModalComponent implements OnInit {
   @Input() selectedEmployee: EmployeeView | null = null;
   @Input() currentUser: User | null = null;
+  @Input() systemStartYM: number | null = null;
   @Output() onClose = new EventEmitter<void>();
   @Output() onSave = new EventEmitter<EmployeeView>();
 
@@ -224,10 +225,10 @@ export class EditEmployeeModalComponent implements OnInit {
         }
 
         for (const sal of (this.salaryStandardList || [])) {
-          const endYM = sal.effectiveEndYear && sal.effectiveEndMonth
-            ? sal.effectiveEndYear * 100 + sal.effectiveEndMonth
-            : (sal.effectiveStartYear && sal.effectiveStartMonth ? sal.effectiveStartYear * 100 + sal.effectiveStartMonth : 0);
-          if (endYM > maxHistoryYM) maxHistoryYM = endYM;
+          const startYM = (sal.effectiveStartYear && sal.effectiveStartMonth)
+            ? (sal.effectiveStartYear * 100 + sal.effectiveStartMonth)
+            : 0;
+          if (startYM > maxHistoryYM) maxHistoryYM = startYM;
         }
 
         for (const b of (this.bonusHistoryList || [])) {
@@ -632,6 +633,25 @@ export class EditEmployeeModalComponent implements OnInit {
       }
       return { ...item, effectivePeriod };
     });
+
+    // 給与履歴の終了年月が退職資格喪失月を超えている場合は自動短縮
+    if (endYM && this.salaryStandardList.length > 0) {
+      const endVal = endYM.year * 100 + endYM.month;
+      this.salaryStandardList = this.salaryStandardList.map(sal => {
+        if (sal.effectiveEndYear && sal.effectiveEndMonth) {
+          const salEndVal = sal.effectiveEndYear * 100 + sal.effectiveEndMonth;
+          if (salEndVal > endVal) {
+            return {
+              ...sal,
+              effectiveEndYear: endYM.year,
+              effectiveEndMonth: endYM.month,
+              effectivePeriod: `${sal.effectiveStartYear}/${String(sal.effectiveStartMonth).padStart(2, '0')} ~ ${endYM.year}/${String(endYM.month).padStart(2, '0')}`
+            };
+          }
+        }
+        return sal;
+      });
+    }
   }
 
   /**
@@ -715,10 +735,30 @@ export class EditEmployeeModalComponent implements OnInit {
     try {
       const formValue = this.form.getRawValue();
 
+      const bonusSummary = calculateHireFiscalYearHealthBonusTotal(
+        formValue.hireDate,
+        this.hasPreviousInsurance,
+        this.previousInsuranceAmount,
+        this.bonusHistoryList
+      );
+
+      if (bonusSummary.isExceeded) {
+        this.isSaving = false;
+        this.currentStep = 2;
+        this.cdr.detectChanges();
+        alert(
+          `${bonusSummary.fiscalYear}年度の健康保険 標準賞与額累計（前職通算含む）が法定上限（573万円）を超えています。（現在: ${bonusSummary.total.toLocaleString('ja-JP')}円）\n` +
+          `該当年度の賞与支給実績または前職賞与額を調整してください。`
+        );
+        return;
+      }
+
       const hasMissingHistory = checkSalaryHistoryGaps(
         formValue.hireDate,
         formValue.retirementDate,
-        this.salaryStandardList
+        this.salaryStandardList,
+        this.insuranceStandardList,
+        this.systemStartYM
       );
 
       const hasIneligibleDependent = this.dependents.some(dep => {

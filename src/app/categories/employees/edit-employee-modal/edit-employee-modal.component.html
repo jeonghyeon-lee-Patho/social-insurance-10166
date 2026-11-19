@@ -258,10 +258,13 @@
             <span class="emp-income-label">社員（本人）の年間収入見込</span>
             <div class="emp-income-input-wrap">
               <input type="number" class="dep-input emp-income-input" [(ngModel)]="employeeAnnualIncome"
-                [ngModelOptions]="{standalone: true}" min="0" step="10000" placeholder="0"
+                [ngModelOptions]="{standalone: true}" min="0" step="1" placeholder="0"
                 (input)="sanitizeEmployeeIncome()" /> 
               <span class="unit-text">円</span>
             </div>
+          </div>
+          <div style="font-size: 11px; color: #64748b;">
+            ※ 産休・育休・傷病休職等で無給の場合は、休業前の年間収入見込を入力してください。
           </div>
           <div *ngIf="dependents.length > 0 && (!employeeAnnualIncome || employeeAnnualIncome <= 0)"
             class="error-message">

@@ -3,7 +3,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, OnDestroy } from "@angula
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { EditEmployeeModalComponent } from "./edit-employee-modal/edit-employee-modal.component";
 import { Auth, authState, User } from '@angular/fire/auth';
-import { Firestore, collection, query, where, getDocs, doc, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, query, where, getDocs, doc, writeBatch, getDoc, setDoc, deleteField } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import { Employee, EmployeeView } from '../../models/employee.model';
 import {
@@ -11,6 +11,7 @@ import {
   filterByStatus,
   filterBySearch,
   formatDate,
+  checkSalaryHistoryGaps,
 } from '../../utils/employee.util';
 
 export type SortKey = 'employeeNumber' | 'name' | 'age' | 'hireDate';
@@ -29,9 +30,18 @@ export class EmployeesComponent implements OnInit, OnDestroy {
   employees: EmployeeView[] = [];
   filteredEmployees: EmployeeView[] = [];
 
+  // 集計開始年月（システム導入基準月）設定
+  systemStartYM: number | null = null;
+  isEditingSystemStart = false;
+  selectedSystemStartYear: number | '' = '';
+  selectedSystemStartMonth: number | '' = '';
+  systemStartYears: number[] = [];
+  systemStartMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+  isUpdatingSystemStart = false;
+
   // フィルター・検索・ソート条件
   searchText = '';
-  statusFilter: StatusFilterType = 'all';
+  statusFilter: StatusFilterType = 'active';
   sortKey: SortKey = 'employeeNumber';
   sortDirection: SortDirection = 'asc';
 
@@ -44,6 +54,13 @@ export class EmployeesComponent implements OnInit, OnDestroy {
   private firestore = inject(Firestore);
   private cdr = inject(ChangeDetectorRef);
   private authSubscription?: Subscription;
+
+  constructor() {
+    const currYear = new Date().getFullYear();
+    for (let y = currYear + 1; y >= 2000; y--) {
+      this.systemStartYears.push(y);
+    }
+  }
 
   ngOnInit() {
     this.authSubscription = authState(this.auth).subscribe(user => {
@@ -71,10 +88,19 @@ export class EmployeesComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     try {
+      const orgId = this.currentUser.uid;
+      const userDocRef = doc(this.firestore, 'social_users', orgId);
       const employeesRef = collection(this.firestore, 'employees');
-      const q = query(employeesRef, where('organizationId', '==', this.currentUser.uid));
-      const querySnapshot = await getDocs(q);
+      const q = query(employeesRef, where('organizationId', '==', orgId));
+      
+      const [userDocSnap, querySnapshot] = await Promise.all([
+        getDoc(userDocRef),
+        getDocs(q)
+      ]);
 
+      const rawStartYM = userDocSnap.exists() ? userDocSnap.data()['systemStartYM'] : null;
+      this.systemStartYM = (typeof rawStartYM === 'number' && rawStartYM > 0) ? rawStartYM : null;
+      
       const employeeList = querySnapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -282,6 +308,110 @@ export class EmployeesComponent implements OnInit, OnDestroy {
    */
   formatDate(dateString: string): string {
     return formatDate(dateString);
+  }
+
+  get systemStartYMDisplay(): string {
+    if (!this.systemStartYM) return '未設定（入社月から）';
+    const y = Math.floor(this.systemStartYM / 100);
+    const m = this.systemStartYM % 100;
+    return `${y}/${String(m).padStart(2, '0')}〜`;
+  }
+
+  openSystemStartEditor() {
+    if (this.systemStartYM) {
+      this.selectedSystemStartYear = Math.floor(this.systemStartYM / 100);
+      this.selectedSystemStartMonth = this.systemStartYM % 100;
+    } else {
+      this.selectedSystemStartYear = new Date().getFullYear();
+      this.selectedSystemStartMonth = 4;
+    }
+    this.isEditingSystemStart = true;
+    this.cdr.detectChanges();
+  }
+
+  cancelSystemStartEditor() {
+    this.isEditingSystemStart = false;
+    this.cdr.detectChanges();
+  }
+
+  async saveSystemStartYM(clearSetting: boolean = false) {
+    if (!this.currentUser || this.isUpdatingSystemStart) return;
+
+    let newYM: number | null = null;
+    if (!clearSetting) {
+      if (!this.selectedSystemStartYear || !this.selectedSystemStartMonth) {
+        alert('年と月を選択してください。');
+        return;
+      }
+      newYM = Number(this.selectedSystemStartYear) * 100 + Number(this.selectedSystemStartMonth);
+    }
+
+    this.isUpdatingSystemStart = true;
+    this.cdr.detectChanges();
+
+    try {
+      const orgId = this.currentUser.uid;
+      const userDocRef = doc(this.firestore, 'social_users', orgId);
+
+      // 1. 事業所の集計開始年月を保存（解除時はフィールド削除）
+      await setDoc(
+        userDocRef,
+        { systemStartYM: newYM ? newYM : deleteField() },
+        { merge: true }
+      );
+      this.systemStartYM = newYM;
+
+      // 2. 全社員の未入力フラグ（hasMissingHistory）を一括再計算
+      const [salSnap, insSnap] = await Promise.all([
+        getDocs(query(collection(this.firestore, 'salary_standards'), where('organizationId', '==', orgId))),
+        getDocs(query(collection(this.firestore, 'insurance_standards'), where('organizationId', '==', orgId)))
+      ]);
+
+      const salMap: Record<string, any[]> = {};
+      salSnap.docs.forEach(d => {
+        const data = d.data();
+        const empId = data['employeeId'];
+        if (empId) (salMap[empId] ??= []).push(data);
+      });
+
+      const insMap: Record<string, any[]> = {};
+      insSnap.docs.forEach(d => {
+        const data = d.data();
+        const empId = data['employeeId'];
+        if (empId) (insMap[empId] ??= []).push(data);
+      });
+
+      const batch = writeBatch(this.firestore);
+      let hasChanges = false;
+
+      this.employees = this.employees.map(emp => {
+        const updatedMissing = checkSalaryHistoryGaps(
+          emp.hireDate,
+          emp.retirementDate,
+          salMap[emp.id] || [],
+          insMap[emp.id] || [],
+          newYM
+        );
+        if (emp.hasMissingHistory !== updatedMissing) {
+          hasChanges = true;
+          batch.update(doc(this.firestore, 'employees', emp.id), { hasMissingHistory: updatedMissing });
+        }
+        return { ...emp, hasMissingHistory: updatedMissing };
+      });
+
+      if (hasChanges) {
+        await batch.commit();
+      }
+
+      this.isEditingSystemStart = false;
+      this.applyFiltersAndSort();
+    } catch (error) {
+      console.error('集計開始年月の保存に失敗しました:', error);
+      alert('集計開始年月の保存に失敗しました。');
+    } finally {
+      this.isUpdatingSystemStart = false;
+      this.cdr.detectChanges();
+    }
   }
 }
 

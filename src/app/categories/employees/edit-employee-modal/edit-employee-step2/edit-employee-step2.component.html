@@ -54,6 +54,9 @@
         </div>
       </ng-template>
     </div>
+    <div class="notes">
+      <p>※料率改定や保険基準の切替時は、既存履歴の適用基準を変更せず、「+ 履歴追加」から新しい適用開始年月で登録してください（前期間の終了年月は自動で閉じられます）。</p>
+    </div>
   </section>
 
   <!-- [2] 標準報酬月額(給与) 等級履歴 -->
@@ -152,6 +155,11 @@
           ※ 健康保険の{{ hireFiscalYear }}累計に合算
         </span>
       </div>
+    </div>
+    <!-- 前職通算情報の上限超過警告 -->
+    <div class="bonus-cap-warning" *ngIf="hireFiscalYearBonusSummary.isExceeded">
+      ⚠ {{ hireFiscalYear }}の健康保険 標準賞与額累計（前職通算含む）が法定上限573万円を超えています（現在: {{ hireFiscalYearBonusSummary.total |
+      number:'1.0-0' }}円）。該当年度の賞与支給実績または前職賞与額を調整してください。
     </div>
 
     <!-- 履歴テーブル -->

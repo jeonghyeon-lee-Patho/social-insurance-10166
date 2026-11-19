@@ -11,7 +11,7 @@ import { EditBonusHistoryModalComponent } from '../edit-bonus-history-modal/edit
 import { SalarySimulatorRegularComponent } from '../salary-simulator-regular/salary-simulator-regular.component';
 import { SalarySimulatorChangedComponent } from '../salary-simulator-changed/salary-simulator-changed.component';
 import { RegularDecisionResult, VarChangedDecisionResult, getVarChangedApplicationPeriod, getPreviousYearMonth } from '../../../../utils/salary-simulator.util';
-import { calculateInsuranceEndYearMonth, formatEffectivePeriod } from '../../../../utils/employee.util';
+import { calculateInsuranceEndYearMonth, formatEffectivePeriod, calculateHireFiscalYearHealthBonusTotal } from '../../../../utils/employee.util';
 
 @Component({
   selector: 'app-edit-employee-step2',
@@ -358,6 +358,15 @@ export class EditEmployeeStep2Component {
     const [y, m] = this.hireDate.split('-').map(Number);
     const fiscalYear = m >= 4 ? y : y - 1;
     return `［${fiscalYear}年度］`;
+  }
+
+  get hireFiscalYearBonusSummary() {
+    return calculateHireFiscalYearHealthBonusTotal(
+      this.hireDate,
+      this.hasPreviousInsurance,
+      this.previousInsuranceAmount,
+      this.bonusHistoryList
+    );
   }
 
   onPreviousInsuranceToggle() {

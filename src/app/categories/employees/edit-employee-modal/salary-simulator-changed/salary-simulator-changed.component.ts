@@ -65,17 +65,18 @@ export class SalarySimulatorChangedComponent implements OnChanges {
     }
   }
 
-  private initializeMonthInputs() {
+  private initializeMonthInputs(preserveValues = false) {
     const baseYear = this.isValidYearMonth() ? Number(this.currentYear) : new Date().getFullYear();
     const baseMonth = this.isValidYearMonth() ? Number(this.currentMonth) : new Date().getMonth() + 1;
 
     this.months = [0, 1, 2].map(offset => {
       const target = this.addMonths(baseYear, baseMonth, offset);
+      const prev = preserveValues ? this.months[offset] : undefined;
       return {
         month: target.month,
         year: target.year,
-        amount: 0,
-        daysSufficient: true
+        amount: prev ? prev.amount : 0,
+        daysSufficient: prev ? prev.daysSufficient : true
       };
     });
   }
@@ -110,7 +111,7 @@ export class SalarySimulatorChangedComponent implements OnChanges {
   }
 
   onChangeMonthChange() {
-    this.initializeMonthInputs();
+    this.initializeMonthInputs(true);
     this.simulate();
   }
 
@@ -202,7 +203,10 @@ export class SalarySimulatorChangedComponent implements OnChanges {
     }
     // 変動開始月の「直前月」（前月）を算出
     const prev = getPreviousYearMonth(Number(this.currentYear), Number(this.currentMonth));
-    const prevHistory = findSalaryHistoryAtMonth(this.salaryHistories, prev.year, prev.month);
+    const rawPrevHistory = findSalaryHistoryAtMonth(this.salaryHistories, prev.year, prev.month);
+    const prevHistory = (rawPrevHistory && (Number(rawPrevHistory.monthlyAmount) || 0) > 0)
+      ? rawPrevHistory
+      : undefined;
 
     this.hasPreviousData = Boolean(prevHistory);
 
@@ -274,7 +278,7 @@ export class SalarySimulatorChangedComponent implements OnChanges {
   }
 
   clearInputs() {
-    this.initializeMonthInputs();
+    this.initializeMonthInputs(false);
     this.simulate();
   }
 
