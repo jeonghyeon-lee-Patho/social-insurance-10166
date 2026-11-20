@@ -225,6 +225,7 @@ export class EditEmployeeModalComponent implements OnInit {
         }
 
         for (const sal of (this.salaryStandardList || [])) {
+          if ((Number(sal.monthlyAmount) || 0) <= 0) continue;
           const startYM = (sal.effectiveStartYear && sal.effectiveStartMonth)
             ? (sal.effectiveStartYear * 100 + sal.effectiveStartMonth)
             : 0;
@@ -327,7 +328,15 @@ export class EditEmployeeModalComponent implements OnInit {
         )
       ];
 
-      this.salaryStandardList = salaries;
+      this.salaryStandardList = salaries.length > 0 ? salaries : [
+        this.modalService.generateDefaultSalaryStandard(
+          this.form.get('hireDate')?.value,
+          this.form.get('retirementDate')?.value,
+          empId,
+          orgId
+        )
+      ];
+      
       this.bonusHistoryList = bonuses;
     } catch (e) {
       console.error('履歴読み込みエラー:', e);
@@ -369,7 +378,6 @@ export class EditEmployeeModalComponent implements OnInit {
     this.employeeAnnualIncome = 0;
     this.dependents = [];
     this.cancelEditDependent();
-    this.form.get('employeeNumber')?.enable();
     this.cdr.detectChanges();
   }
 
@@ -498,9 +506,7 @@ export class EditEmployeeModalComponent implements OnInit {
     const m = String(this.selectedDepBirthMonth).padStart(2, '0');
     const d = String(this.selectedDepBirthDay).padStart(2, '0');
     const birthDateStr = `${y}-${m}-${d}`;
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = getTodayString();
 
     if (birthDateStr > todayStr) {
       alert('生年月日に本日より未来の日付は指定できません。');
@@ -683,6 +689,11 @@ export class EditEmployeeModalComponent implements OnInit {
 
   goToNextStep() {
     if (this.currentStep < 2) {
+      if (this.isEditingDependent) {
+        alert('編集中の扶養家族情報があります。「反映」または「キャンセル」を押してください。');
+        return;
+      }
+      
       if (!this.selectedEmployee && this.insuranceStandardList.length === 0) {
         this.generateDefaultInsuranceStandard();
       } else {
@@ -690,14 +701,13 @@ export class EditEmployeeModalComponent implements OnInit {
       }
 
       if (
-        !this.selectedEmployee &&
         this.salaryStandardList.length === 1 &&
         (Number(this.salaryStandardList[0].monthlyAmount) || 0) === 0
       ) {
         this.salaryStandardList = [];
       }
 
-      if (!this.selectedEmployee && this.salaryStandardList.length === 0) {
+      if (this.salaryStandardList.length === 0) {
         this.generateDefaultSalaryStandard();
       }
 
@@ -765,7 +775,10 @@ export class EditEmployeeModalComponent implements OnInit {
         return !checkDependentEligibility(dep, this.employeeAnnualIncome, formValue.dateOfBirth).isHealthEligible;
       });
 
-      const isNumberChanged = !this.selectedEmployee || this.selectedEmployee.employeeNumber !== formValue.employeeNumber;
+      const trimmedEmpNo = (formValue.employeeNumber || '').trim();
+      formValue.employeeNumber = trimmedEmpNo;
+
+      const isNumberChanged = !this.selectedEmployee || this.selectedEmployee.employeeNumber !== trimmedEmpNo;      
       if (isNumberChanged) {
         const isDuplicate = await this.modalService.isEmployeeNumberDuplicate(
           formValue.employeeNumber,
